@@ -1,10 +1,11 @@
-import { Component, EventEmitter, Output, OnInit, OnDestroy } from '@angular/core';
+import { Component, EventEmitter, Output, OnInit, afterNextRender,
+  OnDestroy, inject, Injector, ViewChild } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common'; 
 // import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
-import { MatInputModule } from '@angular/material/input';
+import { MatInput, MatInputModule } from '@angular/material/input';
 // import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatMenuTrigger } from '@angular/material/menu';
@@ -12,17 +13,24 @@ import { McpService } from '../../services/mcp.service';
 import { NamedItem } from '../../common'; // Assuming you have a common.ts file for interfaces
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs';
+import { MatChipsModule } from '@angular/material/chips';
+import {CdkTextareaAutosize, TextFieldModule} from '@angular/cdk/text-field';
+
 @Component({
   selector: 'app-input-box',
   imports: [FormsModule, ReactiveFormsModule, CommonModule, MatMenuModule, 
-    MatIconModule, MatInputModule, MatFormFieldModule, MatMenuTrigger],
+    MatIconModule, MatInputModule, MatFormFieldModule, MatMenuTrigger, MatChipsModule,
+    TextFieldModule],
   templateUrl: './input-box.component.html',
   styleUrl: './input-box.component.css',
   standalone: true
 })
 export class InputBoxComponent implements OnInit, OnDestroy {
+  private _injector = inject(Injector);
+  @ViewChild('autosize') autosize!: CdkTextareaAutosize;
+
   @Output() sendMessage = new EventEmitter<string>();
-  @Output() sendTool = new EventEmitter<Array<NamedItem>>();
+  @Output() sendTool = new EventEmitter<NamedItem | null>();
   @Output() sendResource = new EventEmitter<string>();
   @Output() sendPrompt = new EventEmitter<string>();
   message = '';
@@ -34,15 +42,14 @@ export class InputBoxComponent implements OnInit, OnDestroy {
   resources:Array<NamedItem> = [];
   prompts: Array<NamedItem> = [];
 
-  selectedTool: string | null = null;
-  selectedResource: string | null = null;
-  selectedPrompt: string | null = null;
+  selectedTool: NamedItem | null = null;
+  selectedResource: NamedItem | null = null;
+  selectedPrompt: NamedItem | null = null;
   isConnected: boolean = false;
   private subs = new Subscription();
   constructor(private mcpService: McpService) {
 
   }
-
 
   ngOnInit(): void {
     this.subs.add(
@@ -55,53 +62,90 @@ export class InputBoxComponent implements OnInit, OnDestroy {
               this.subs.add(this.mcpService.resources$.subscribe(resources => this.resources = resources));
             })
         );
+    this.triggerResize()
   }
 
-  submitMessage() {
+
+   triggerResize() {
+    // Wait for content to render, then trigger textarea resize.
+    afterNextRender(
+      () => {
+        this.autosize.resizeToFitContent(true);
+      },
+      {
+        injector: this._injector,
+      },
+    );
+  }
+
+   submitMessage() {
     if (this.message.trim()) {
+      // Your message submission logic
+      console.log('Message sent:', this.message);
       this.sendMessage.emit(this.message);
-      this.sendTool.emit(this.tools);
       this.message = '';
     }
   }
 
-  selectTool(tool: string) {
-    this.selectedTool = tool;
+  // submitMessage() {
+  //   if (this.message.trim()) {
+  //     this.sendMessage.emit(this.message);
+  //     // this.sendTool.emit(this.tools);
+  //     this.message = '';
+  //   }
+  // }
+
+  selectTool(selected_tool: NamedItem) {
+    if(this.selectedTool){
+      this.tools.push(this.selectedTool)
+    }
+    this.tools = this.tools.filter(tool => tool.name !== selected_tool.name);
+    this.selectedTool = selected_tool;
     this.showToolsMenu = false;
-    // You can add logic here to handle the selected tool
+    this.sendTool.emit(this.selectedTool)
   }
 
-  selectResource(resource: string) {
-    this.selectedResource = resource;
+  selectResource(selected_resource: NamedItem) {
+    if(this.selectedResource){
+      this.resources.push(this.selectedResource);
+    }
+    this.resources = this.resources.filter(resource => resource.name !== selected_resource.name);
+    this.selectedResource = selected_resource;
     this.showResourcesMenu = false;
-    // You can add logic here to handle the selected resource
   }
 
-  selectPrompt(prompt: string) {
-    this.selectedPrompt = prompt;
+  selectPrompt(selected_prompt: NamedItem) {
+     if(this.selectedPrompt){
+      this.prompts.push(this.selectedPrompt);
+    }
+    this.prompts = this.prompts.filter(prompt => prompt.name !== selected_prompt.name);
+    this.selectedPrompt = selected_prompt;
     this.showPromptsMenu = false;
-    // You can add logic here to handle the selected prompt
   }
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
   }
 
-  // async sendPrompt(promptName: string) {
-  //   const args = {}; // Define your arguments here
-  //   // const prompt = await this.mcpService.prompt(promptName, args);
-  //   console.log('Sending prompt:', promptName);
-  //   // Handle the prompt sending as needed
-  // }
-
-  // async activateTool(toolName: string) {
-  //   const tool = this.tools.find(t => t.name === toolName);
-  //   if (tool) {
-  //     console.log('Activating tool:', tool);
-  //     // Handle the tool activation as needed
-  //   } else {
-  //     console.error('Tool not found:', toolName);
-  //   }
-  // }
+  clearSelection(selectedItem: string, item: NamedItem){
+    switch (selectedItem) {
+      case 'prompt':
+        this.selectedPrompt = null;
+        this.prompts.push(item)
+        break;
+      case 'resource':
+        this.selectedResource = null;
+        this.resources.push(item)
+      break;
+      case 'tool':
+        this.selectedTool = null;
+        this.tools.push(item)
+        this.sendTool.emit(this.selectedTool)
+      break;
+    
+      default:
+        break;
+    }
+  }
   
 }

@@ -1,26 +1,21 @@
 .input-container {
-  padding: 16px 20px;
+  padding: 12px 20px;
   background-color: #ffffff;
   border-radius: 12px;
   margin-bottom: 20px;
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .input-box {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-end;
+  gap: 1px;
 }
 
 .input-actions {
   display: flex;
   gap: 8px;
-  /* padding-top: 8px; */
-  /* border-top: 1px solid #f0f0f0; */
-  /* margin-top: -4px; */
+
 }
 
 .action-button {
@@ -51,7 +46,84 @@
 }
 
 .full-width {
-  flex: 1;
+  /* flex: 1;
+  min-height: 44px; 
+  max-height: 200px; 
+  overflow-y: hidden; 
+  resize: none; */
+  width: 100%;
 }
 
-/* Rest of your existing CSS remains the same */
+.mat-form-field {
+  width: 100%;
+}
+
+.mat-form-field textarea {
+  min-height: 44px;
+  line-height: 1.5;
+}
+
+.send-button {
+  margin-bottom: 8px;
+  color: #1976d2;
+}
+
+
+.menu-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.selected-items {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.selected-item {
+  background: #f0f0f0;
+  border-radius: 16px;
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.selected-item:hover {
+  background: #e0e0e0;
+}
+
+.chip-icon {
+  margin-right: 6px;
+  font-size: 16px;
+}
+
+/* Solid background for all mat-menus */
+.mat-mdc-menu-panel.enhanced-menu {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03) !important;
+  border: none !important;
+  padding: 4px 0 !important;
+}
+
+/* Menu items styling */
+.mat-mdc-menu-item {
+  background: transparent !important; /* Keep items transparent on white */
+}
+
+/* Hover state for menu items */
+.mat-mdc-menu-item:hover {
+  background: #f8f8f8 !important; /* Matches your action-button background */
+}
+
+/* Menu icons */
+.menu-icon {
+  margin-right: 8px;
+  color: #666; /* Matches your icon colors */
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+

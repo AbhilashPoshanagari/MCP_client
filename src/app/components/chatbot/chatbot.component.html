@@ -4,7 +4,7 @@
         <div class="message-content">
           <div class="message-text">
             <!-- {{message.content}} -->
-            <markdown [data]="message.content"></markdown>
+            <markdown *ngIf="message.content && typeof message.content === 'string'" [data]="message.content"></markdown>
           </div>
           <div class="message-time">{{message.timestamp | date:'shortTime'}}</div>
         </div>

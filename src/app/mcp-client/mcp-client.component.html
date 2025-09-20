@@ -1,54 +1,12 @@
 <div class="status-indicator">
   <i class="fas fa-circle" [ngClass]="{'connected': isConnected, 'disconnected': !isConnected}"></i>
   <h5>{{ isConnected ? 'Connected to MCP Server' : 'Disconnected from MCP Server' }}</h5>
+  @if (isConnected){
+    <button (click)="disconnect()">Disconnect</button>
+  }
+
 </div>
-<div *ngIf="isConnected; else disconnected">
-  <!-- <h5>Connected to MCP Server</h5> -->
-  <!-- Elicit Form -->
-  <!-- <div *ngIf="currentElicitRequest" class="elicit-form">
-    <h3>{{ currentElicitRequest.message }}</h3>
-    <form (ngSubmit)="submitElicitForm(form.value)" #form="ngForm">
-      <div *ngFor="let field of currentElicitRequest.fields" class="form-field">
-        <label [attr.for]="field.name">{{ field.title }}</label>
-        <span *ngIf="field.required" class="required">*</span>
-        
-        <div *ngIf="field.type === 'string' && !field.enum">
-          <input 
-            [id]="field.name" 
-            [name]="field.name" 
-            type="text" 
-            [required]="field.required"
-            ngModel>
-        </div>
-        
-        <div *ngIf="field.type === 'boolean'">
-          <input 
-            [id]="field.name" 
-            [name]="field.name" 
-            type="checkbox" 
-            ngModel>
-        </div>
-        
-        <div *ngIf="field.enum">
-          <select 
-            [id]="field.name" 
-            [name]="field.name" 
-            [required]="field.required"
-            ngModel>
-            <option *ngFor="let option of field.enum" [value]="option">{{ option }}</option>
-          </select>
-        </div>
-        
-        <div *ngIf="field.description" class="field-description">
-          {{ field.description }}
-        </div>
-      </div>
-      
-      <button type="submit">Submit</button>
-      <button type="button" (click)="cancelElicit()">Cancel</button>
-    </form>
-  </div> -->
-  
+<div *ngIf="isConnected; else disconnected">  
   <!-- Notifications -->
   <div class="notifications">
     <h6>Notifications ({{ notifications.length }})</h6>
@@ -57,6 +15,7 @@
     </div>
   </div>
 </div>
+
 <ng-template #disconnected>
   <!-- <h5>Disconnected from MCP Server</h5> -->
   <button (click)="connect()">Connect</button>

@@ -18,6 +18,7 @@ export class ChatbotComponent {
   handleUserMessage(msg: string) {
     this.messages.push({ role: 'user', content: msg });
     // For now, we will just simulate a response
+    console.log(this.messages)
     setTimeout(() => {
       this.messages.push({ role: 'assistant', content: `Response to: ${msg}` });
     }, 1000);

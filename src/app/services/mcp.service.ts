@@ -24,7 +24,9 @@ import {
   ToolSchema,
   PromptSchema,
   ResourceSchema,
-  ElicitResultSchema
+  ElicitResultSchema,
+  CreateMessageRequestSchema,
+  ProgressNotificationSchema
 } from '@modelcontextprotocol/sdk/types.js';
 import Ajv from "ajv";
 import { switchMap, expand, takeWhile, finalize } from 'rxjs/operators';
@@ -87,6 +89,7 @@ export class McpService {
 
   private elicitResponseSubject = new Subject<any>();
   public elicitResponses$ = this.elicitResponseSubject.asObservable();
+  public notificationsToolLastEventId: string | undefined = undefined;
 
   constructor() {}
 
@@ -106,6 +109,7 @@ export class McpService {
       }, {
         capabilities: {
           elicitation: {},
+          sampling: {},
         },
       });
 
@@ -115,10 +119,10 @@ export class McpService {
       {
         sessionId: localStorage.getItem('mcp_session_id') || undefined,
         requestInit: {
-          headers: {
+          headers: new Headers ({
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          },
+            'Content-Type': 'application/json, text/event-stream'
+          }),
           cache: 'no-store', // Disable caching
         },
         reconnectionOptions: {
@@ -127,7 +131,7 @@ export class McpService {
           reconnectionDelayGrowFactor: 1.5,
           maxRetries: 3
         }
-      }
+      },
     );
 
     // Set up error handler
@@ -153,147 +157,11 @@ export class McpService {
         localStorage.removeItem('mcp_session_id');
       };
 
-      // Set up elicitation request handler with proper validation
-      // this.client.setRequestHandler(ElicitRequestSchema, async (request, extra) => {
-      //         console.log('Elicitation Request Received:', request);
-      //         console.log('Request ID:', extra.requestId);
-              
-      //         const schema = request.params.requestedSchema;
-      //         const properties = schema.properties;
-      //         const required = schema.required || [];
-              
-      //         // Convert schema to a more Angular-friendly format
-      //         const fields: ElicitField[] = Object.entries(properties).map(([fieldName, fieldSchema]: [string, any]) => ({
-      //             name: fieldName,
-      //             title: fieldSchema.title || fieldName,
-      //             description: fieldSchema.description,
-      //             type: fieldSchema.type || 'string',
-      //             required: required.includes(fieldName),
-      //             enum: fieldSchema.enum,
-      //             minimum: fieldSchema.minimum,
-      //             maximum: fieldSchema.maximum,
-      //             minLength: fieldSchema.minLength,
-      //             maxLength: fieldSchema.maxLength,
-      //             format: fieldSchema.format,
-      //             default: fieldSchema.default
-      //         }));
-
-      //         const prompt: ElicitPrompt = {
-      //             message: request.params.message,
-      //             schema: schema,
-      //             fields: fields,
-      //             requestId: extra.requestId // Store the request ID for tracking
-      //         };
-              
-      //         console.log("elicit prompt : ", prompt);
-              
-      //         // Store the current request
-      //         this.currentRequest = prompt;
-              
-      //         // Emit the elicit request to subscribers
-      //         this.elicitRequestSubject.next(prompt);
-              
-      //         return new Promise((resolve, reject) => {
-      //             const timeout = setTimeout(() => {
-      //                 subscription.unsubscribe();
-      //                 this.currentRequest = null;
-                      
-      //                 // Optionally send a timeout notification
-      //                 // extra.sendNotification({
-      //                 //     method: 'elicit_timeout',
-      //                 //     params: {
-      //                 //         requestId: extra.requestId,
-      //                 //         message: 'Request timed out'
-      //                 //     }
-      //                 // }).catch(console.error);
-                      
-      //                 reject(new Error('Request timed out'));
-      //             }, 30000); // 30-second timeout
-
-      //             // Handle abort signal
-      //             extra.signal.addEventListener('abort', () => {
-      //                 clearTimeout(timeout);
-      //                 subscription.unsubscribe();
-      //                 this.currentRequest = null;
-      //                 reject(new Error('Request was aborted'));
-      //             });
-
-      //             const subscription = this.elicitRequestSubject.subscribe(async (response: any) => {
-      //                 // Check if this is a response (has action property) and matches current request
-      //                 if (response && response.action && this.currentRequest === prompt) {
-      //                     subscription.unsubscribe();
-      //                     this.currentRequest = null;
-                          
-      //                     if (response.action === 'accept') {
-
-      //                       let newId = parseInt(extra.requestId.toString())
-      //                         resolve({
-      //                             jsonrpc: "2.0",
-      //                             id: newId + 1,
-      //                             result: {
-      //                               action: response.action,  // Include action
-      //                               content: response.content
-      //                             }
-      //                         });
-      //                     } else {
-      //                         reject({
-      //                               jsonrpc: "2.0",
-      //                               id: extra.requestId,
-      //                               error: {
-      //                                   code: -32000,
-      //                                   message: `User ${response.action} the request`
-      //                               }
-      //                           });
-      //                     }
-      //                     clearTimeout(timeout);
-      //                 }
-      //             });
-      //         });
-      //     });
-
       this.initializeElicitationHandler(this.client);
-
-      // Set up notification handlers
-      this.client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
-        this.notificationCount++;
-        const notificationMessage = {
-          type: 'log',
-          level: notification.params.level,
-          message: notification.params.data,
-          count: this.notificationCount
-        };
-        console.log('MCP Notification:', notificationMessage);
-        this.notificationsSubject.next(notificationMessage);
-      });
-
-      this.client.setNotificationHandler(ResourceListChangedNotificationSchema, async (_) => {
-        console.log('Resource list changed notification received');
-        this.notificationsSubject.next({
-          type: 'resource-change',
-          message: 'Resource list has changed'
-        });
-        
-        try {
-          if (!this.client) {
-            console.log('Client disconnected, cannot fetch resources');
-            return;
-          }
-          const resourcesResult = await this.client.request({
-            method: 'resources/list',
-            params: {}
-          }, ListResourcesResultSchema);
-          this.notificationsSubject.next({
-            type: 'resource-list',
-            resources: resourcesResult.resources
-          });
-        } catch (error) {
-          console.log('Failed to list resources after change notification', error);
-          this.notificationsSubject.next({
-            type: 'error',
-            message: 'Failed to fetch updated resources'
-          });
-        }
-      });
+      this.samplingCapability(this.client);
+      this.progressNotificationHandler(this.client);
+      this.loggingNotificationHandler(this.client);
+      this.resourceListChangingHandler(this.client);
 
       // Connect the client
       await this.client.connect(this.transport);
@@ -321,38 +189,72 @@ export class McpService {
     }
   }
 
-// Add this method to handle reconnection with existing session
-async reconnect(): Promise<void> {
-  const storedSessionId = localStorage.getItem('mcp_session_id');
-  if (storedSessionId) {
-    this.sessionId = storedSessionId;
-    await this.connect();
-  } else {
-    throw new Error('No stored session ID found');
-  }
+resourceListChangingHandler(client: Client){
+  client.setNotificationHandler(ResourceListChangedNotificationSchema, async (_) => {
+      console.log('Resource list changed notification received');
+      this.notificationsSubject.next({
+        type: 'resource-change',
+        message: 'Resource list has changed'
+      });
+      
+      try {
+        if (!this.client) {
+          console.log('Client disconnected, cannot fetch resources');
+          return;
+        }
+        const resourcesResult = await this.client.request({
+          method: 'resources/list',
+          params: {}
+        }, ListResourcesResultSchema);
+
+        this.notificationsSubject.next({
+          type: 'resource-list',
+          resources: resourcesResult.resources
+        });
+
+      } catch (error) {
+        console.log('Failed to list resources after change notification', error);
+        this.notificationsSubject.next({
+          type: 'error',
+          message: 'Failed to fetch updated resources'
+        });
+      }
+    });
 }
 
-//  initializeElicitationHandler(client: any): void {
-//     client.setRequestHandler(ElicitRequestSchema, (request: any) => {
-//     // Safely extract form schema from the request with defaults
-//       this.handleElicitRequest(request);
-//       // Show UI and wait for user input
-//       this.elicitRequests$.subscribe((response: any) => {
-//         console.log("UI response : ", response)
-//       return {
-//           action: response.action || "cancel", // Default action
-//           content: response.content
-//         };
-//       }, (err) => { 
-//         console.log("Error : ", err);
-//         return {
-//           action: "decline"
-//         }
-//       })
-//     });
-//   }
+loggingNotificationHandler(client: Client){
+    // Set up notification handlers
+  client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
+      this.notificationCount++;
+      const notificationMessage = {
+        type: 'log',
+        level: notification.params.level,
+        message: notification.params.data,
+        count: this.notificationCount
+      };
+      console.log('MCP Notification:', notificationMessage);
+      this.notificationsSubject.next(notificationMessage);
+    });
+}
 
-initializeElicitationHandler(client: any): void {
+progressNotificationHandler(client: Client){
+  client.setNotificationHandler(ProgressNotificationSchema, (notification) => {
+    console.log("On progress : ", notification)
+      this.notificationCount++;
+      const notificationMessage = {
+        type: 'log',
+        progress: notification.params.progress,
+        total: notification.params.total,
+        message: notification.params.message,
+        progressToken: notification.params.progressToken,
+        count: this.notificationCount
+      };
+      console.log('MCP Notification:', notificationMessage);
+      this.notificationsSubject.next(notificationMessage);
+  });
+}
+
+initializeElicitationHandler(client: Client): void {
   client.setRequestHandler(ElicitRequestSchema, (request: any) => {
     // Trigger the UI to show (assuming handleElicitRequest does this)
     this.handleElicitRequest(request);
@@ -381,115 +283,137 @@ initializeElicitationHandler(client: any): void {
   });
 }
 
-renderElicitationUI(schema: any): Promise<any>{
-
- return new Promise((resolve) => {
-          // Create modal container
-          const modal = document.createElement('div');
-          modal.style.position = 'fixed';
-          modal.style.top = '0';
-          modal.style.left = '0';
-          modal.style.width = '100%';
-          modal.style.height = '100%';
-          modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-          modal.style.display = 'flex';
-          modal.style.justifyContent = 'center';
-          modal.style.alignItems = 'center';
-          modal.style.zIndex = '1000';
-          
-          // Create form container
-          const form = document.createElement('div');
-          form.style.backgroundColor = 'white';
-          form.style.padding = '20px';
-          form.style.borderRadius = '8px';
-          form.style.maxWidth = '500px';
-          form.style.width = '100%';
-          
-          // Add title (with fallback)
-          const title = document.createElement('h2');
-          title.textContent = schema?.title || "Please provide additional information";
-          form.appendChild(title);
-          
-          // Create form fields with proper validation
-          const formData: any = {};
-          const fields = schema?.fields || [];
-          
-          fields.forEach((field: any) => {
-            const fieldContainer = document.createElement('div');
-            fieldContainer.style.marginBottom = '15px';
-            
-            const label = document.createElement('label');
-            label.textContent = field?.label || field?.name || 'Field';
-            label.style.display = 'block';
-            label.style.marginBottom = '5px';
-            fieldContainer.appendChild(label);
-            
-            if (field?.type === 'boolean') {
-              const checkbox = document.createElement('input');
-              checkbox.type = 'checkbox';
-              checkbox.id = field.name;
-              checkbox.checked = false; // Default value
-              checkbox.addEventListener('change', (e) => {
-                formData[field.name] = (e.target as HTMLInputElement).checked;
-              });
-              fieldContainer.appendChild(checkbox);
-            } 
-            else if (field?.type === 'select') {
-              const select = document.createElement('select');
-              select.id = field.name;
-              select.style.width = '100%';
-              select.style.padding = '8px';
-              
-              // Add options
-              const options = field?.options || [];
-              options.forEach((option: string) => {
-                const optionElement = document.createElement('option');
-                optionElement.value = option;
-                optionElement.textContent = option;
-                select.appendChild(optionElement);
-              });
-              
-              // Set default value
-              formData[field.name] = options[0] || '';
-              select.addEventListener('change', (e) => {
-                formData[field.name] = (e.target as HTMLSelectElement).value;
-              });
-              fieldContainer.appendChild(select);
-            }
-            else {
-              const input = document.createElement('input');
-              input.type = field?.type || 'text';
-              input.id = field?.name || `field-${Math.random().toString(36).substring(2, 9)}`;
-              input.style.width = '100%';
-              input.style.padding = '8px';
-              input.addEventListener('input', (e) => {
-                formData[field.name] = (e.target as HTMLInputElement).value;
-              });
-              fieldContainer.appendChild(input);
-            }
-            
-            form.appendChild(fieldContainer);
-          });
-          
-          // Add submit button
-          const submitButton = document.createElement('button');
-          submitButton.textContent = 'Submit';
-          submitButton.style.padding = '8px 16px';
-          submitButton.style.backgroundColor = '#007bff';
-          submitButton.style.color = 'white';
-          submitButton.style.border = 'none';
-          submitButton.style.borderRadius = '4px';
-          submitButton.style.marginTop = '10px';
-          submitButton.addEventListener('click', () => {
-            document.body.removeChild(modal);
-            resolve(formData);
-          });
-          form.appendChild(submitButton);
-          
-          modal.appendChild(form);
-          document.body.appendChild(modal);
-        });
+// Add this method to handle reconnection with existing session
+async reconnect(): Promise<void> {
+  const storedSessionId = localStorage.getItem('mcp_session_id');
+  if (storedSessionId) {
+    this.sessionId = storedSessionId;
+    await this.connect();
+  } else {
+    throw new Error('No stored session ID found');
+  }
 }
+
+samplingCapability(client: Client){
+  client.setRequestHandler(CreateMessageRequestSchema, () => ({
+      model: "test-model",
+      role: "assistant",
+      content: {
+        type: "text",
+        text: "Test response",
+      },
+    }));
+}
+
+// renderElicitationUI(schema: any): Promise<any>{
+
+//  return new Promise((resolve) => {
+//           // Create modal container
+//           const modal = document.createElement('div');
+//           modal.style.position = 'fixed';
+//           modal.style.top = '0';
+//           modal.style.left = '0';
+//           modal.style.width = '100%';
+//           modal.style.height = '100%';
+//           modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+//           modal.style.display = 'flex';
+//           modal.style.justifyContent = 'center';
+//           modal.style.alignItems = 'center';
+//           modal.style.zIndex = '1000';
+          
+//           // Create form container
+//           const form = document.createElement('div');
+//           form.style.backgroundColor = 'white';
+//           form.style.padding = '20px';
+//           form.style.borderRadius = '8px';
+//           form.style.maxWidth = '500px';
+//           form.style.width = '100%';
+          
+//           // Add title (with fallback)
+//           const title = document.createElement('h2');
+//           title.textContent = schema?.title || "Please provide additional information";
+//           form.appendChild(title);
+          
+//           // Create form fields with proper validation
+//           const formData: any = {};
+//           const fields = schema?.fields || [];
+          
+//           fields.forEach((field: any) => {
+//             const fieldContainer = document.createElement('div');
+//             fieldContainer.style.marginBottom = '15px';
+            
+//             const label = document.createElement('label');
+//             label.textContent = field?.label || field?.name || 'Field';
+//             label.style.display = 'block';
+//             label.style.marginBottom = '5px';
+//             fieldContainer.appendChild(label);
+            
+//             if (field?.type === 'boolean') {
+//               const checkbox = document.createElement('input');
+//               checkbox.type = 'checkbox';
+//               checkbox.id = field.name;
+//               checkbox.checked = false; // Default value
+//               checkbox.addEventListener('change', (e) => {
+//                 formData[field.name] = (e.target as HTMLInputElement).checked;
+//               });
+//               fieldContainer.appendChild(checkbox);
+//             } 
+//             else if (field?.type === 'select') {
+//               const select = document.createElement('select');
+//               select.id = field.name;
+//               select.style.width = '100%';
+//               select.style.padding = '8px';
+              
+//               // Add options
+//               const options = field?.options || [];
+//               options.forEach((option: string) => {
+//                 const optionElement = document.createElement('option');
+//                 optionElement.value = option;
+//                 optionElement.textContent = option;
+//                 select.appendChild(optionElement);
+//               });
+              
+//               // Set default value
+//               formData[field.name] = options[0] || '';
+//               select.addEventListener('change', (e) => {
+//                 formData[field.name] = (e.target as HTMLSelectElement).value;
+//               });
+//               fieldContainer.appendChild(select);
+//             }
+//             else {
+//               const input = document.createElement('input');
+//               input.type = field?.type || 'text';
+//               input.id = field?.name || `field-${Math.random().toString(36).substring(2, 9)}`;
+//               input.style.width = '100%';
+//               input.style.padding = '8px';
+//               input.addEventListener('input', (e) => {
+//                 formData[field.name] = (e.target as HTMLInputElement).value;
+//               });
+//               fieldContainer.appendChild(input);
+//             }
+            
+//             form.appendChild(fieldContainer);
+//           });
+          
+//           // Add submit button
+//           const submitButton = document.createElement('button');
+//           submitButton.textContent = 'Submit';
+//           submitButton.style.padding = '8px 16px';
+//           submitButton.style.backgroundColor = '#007bff';
+//           submitButton.style.color = 'white';
+//           submitButton.style.border = 'none';
+//           submitButton.style.borderRadius = '4px';
+//           submitButton.style.marginTop = '10px';
+//           submitButton.addEventListener('click', () => {
+//             document.body.removeChild(modal);
+//             resolve(formData);
+//           });
+//           form.appendChild(submitButton);
+          
+//           modal.appendChild(form);
+//           document.body.appendChild(modal);
+//         });
+// }
 
 private handleElicitRequest(request: any): void {
     const schema = request.params.requestedSchema;
@@ -529,15 +453,6 @@ private parseSchemaToFields(schema: any): any[] {
     this.elicitResponseSubject.next(response);
   }
 
-    // submitElicitResponse(response: { 
-    //     action: 'accept' | 'decline' | 'cancel', 
-    //     content?: any,
-    //     requestId: string | number
-    //   }): void {
-    //     this.elicitResponseSubject.next(response);
-    //   }
-    // }
-
   // Wrapper methods for common MCP operations
   async listTools() {
     if (!this.client) {
@@ -547,6 +462,9 @@ private parseSchemaToFields(schema: any): any[] {
       method: 'tools/list',
       params: {}
     }, ListToolsResultSchema);
+      for (const tool of toollist.tools) {
+        tool['displayName'] = getDisplayName(tool)
+      }
     this.toolsSubject.next(toollist.tools)
   }
 
@@ -570,6 +488,10 @@ private parseSchemaToFields(schema: any): any[] {
       method: 'prompts/list',
       params: {}
     }, ListPromptsResultSchema);
+    for (const prompt of prompts.prompts) {
+        prompt['displayName'] = getDisplayName(prompt)
+      }
+      console.log("Prompt : ", prompts.prompts)
     this.promptsSubject.next(prompts.prompts)
   }
 
@@ -608,6 +530,9 @@ private parseSchemaToFields(schema: any): any[] {
       method: 'resources/list',
       params: {}
     }, ListResourcesResultSchema)
+      for(const resource of resources.resources) {
+        resource['displayName'] = getDisplayName(resource)
+      }
     this.resourceSubject.next(resources.resources)
   }
 
@@ -623,29 +548,21 @@ private parseSchemaToFields(schema: any): any[] {
     }, ReadResourceResultSchema);
   }
 
-// async disconnect(): Promise<void> {
-//   if (!this.client || !this.transport) {
-//     console.log('Not connected.');
-//     return;
-//   }
-
-//   try {
-//     await this.transport.close();
-//     console.log('Disconnected from MCP server');
-//     this.client = null;
-//     this.transport = null;
-//   } catch (error) {
-//     console.error('Error disconnecting:', error);
-//   }
-// }
-
 // Update your disconnect method
 async disconnect(): Promise<void> {
-  if (this.client || !this.transport) {
+  if (this.client && this.transport) {
     try {
+       if (this.transport.sessionId) {
+        try {
+          console.log('Terminating session before exit...');
+          await this.transport.terminateSession();
+          console.log('Session terminated successfully');
+        } catch (error) {
+          console.error('Error terminating session:', error);
+        }
+      }
       // Clear the stored session ID
       await this.transport?.close();
-      // await this.transport?.terminateSession();
       this.client = null;
       this.transport = null;
       this.sessionId = undefined;
@@ -660,17 +577,52 @@ async disconnect(): Promise<void> {
 }
 
 async callTool(toolId: string, parameters: any): Promise<any> {
+    const progressToken = this.generateProgressToken(); // Generate a unique token
     if (!this.client) {
       throw new Error('Client not connected');
     }
     return await this.client.request({
-      method: 'tools/call',
-      params: {
-        name: toolId,
-        arguments: parameters
-      }
-    }, CallToolResultSchema);
+          method: 'tools/call',
+          params: {
+            name: toolId,
+            arguments: parameters,
+            _meta:{
+              stream: true,
+              progressToken: progressToken
+            }
+          }
+        }, CallToolResultSchema);  
   }
+
+async longRunningTool(toolId: string, parameters: any){
+      let self = this;
+      const progressToken = this.generateProgressToken(); // Generate a unique token
+      const onLastEventIdUpdate = (event: string) => {
+      self.notificationsToolLastEventId = event;
+      console.log(`Updated resumption token: ${event}`);
+      console.log(`Updated resumption token: ${self.notificationsToolLastEventId}`);
+    };
+
+    if (!this.client) {
+      throw new Error('Client not connected');
+    }
+    return await this.client.request({
+          method: 'tools/call',
+          params: {
+            name: toolId,
+            arguments: parameters,
+            _meta:{
+              stream: true,
+              progressToken: progressToken
+            }
+          }
+        }, CallToolResultSchema,
+        {
+          resumptionToken: self.notificationsToolLastEventId,
+          onresumptiontoken: onLastEventIdUpdate
+        }
+      );
+}
 
   callToolWithStream(toolId: string, parameters: any): Observable<{ content: string, progress?: number }> {
     const progressToken = this.generateProgressToken(); // Generate a unique token

@@ -1,70 +1,101 @@
 <div class="input-container">
-  <!-- Moved input-actions outside of input-box and to the bottom -->
   <div class="input-box">
     <mat-form-field appearance="fill" class="full-width">
-      <textarea matInput [(ngModel)]="message" placeholder="Message..." 
-                (keydown.enter)="submitMessage()"></textarea>
+      <!-- <textarea matInput [(ngModel)]="message" placeholder="Message..." 
+                (keydown.enter)="submitMessage()"></textarea> -->
+      <textarea matInput
+            cdkTextareaAutosize
+            #autosize="cdkTextareaAutosize"
+            cdkAutosizeMinRows="1"
+            cdkAutosizeMaxRows="25"
+            [(ngModel)]="message"
+            placeholder="Message..."
+            (keydown.enter)="submitMessage()"
+            ></textarea>
     </mat-form-field>
     <button mat-icon-button (click)="submitMessage()" [disabled]="!message.trim()" class="send-button">
       <mat-icon class="icon-small">send</mat-icon>
     </button>
   </div>
-  <div class="input-actions">
-    <button mat-icon-button [matMenuTriggerFor]="toolsMenu" class="action-button">
+<div>
+
+  <button 
+      mat-icon-button 
+      [matMenuTriggerFor]="toolsMenu" 
+      class="action-button"
+      matTooltip="Tools"
+    >
       <mat-icon class="icon-small">build</mat-icon>
     </button>
-    <mat-menu #toolsMenu="matMenu" class="action-menu">
-      @for (tool of tools; track tool) {
-        <button mat-menu-item (click)="selectTool(tool.name)">
-          <span>{{tool.name}}</span>
+    <mat-menu #toolsMenu="matMenu" class="enhanced-menu">
+      @for (tool of tools; track tool.name) {
+        <button mat-menu-item (click)="selectTool(tool)">
+          <mat-icon class="menu-icon">build</mat-icon>
+          <span>{{ tool.displayName }}</span>
         </button>
       }
     </mat-menu>
 
-    <button mat-icon-button [matMenuTriggerFor]="resourcesMenu" class="action-button">
+    <button 
+      mat-icon-button 
+      [matMenuTriggerFor]="resourcesMenu" 
+      class="action-button"
+      matTooltip="Resources"
+    >
       <mat-icon class="icon-small">collections_bookmark</mat-icon>
     </button>
-    <mat-menu #resourcesMenu="matMenu" class="action-menu">
-      @for (resource of resources; track resource) {
-        <button mat-menu-item (click)="selectResource(resource.name)">
-          <span>{{resource.name}}</span>
+    <mat-menu #resourcesMenu="matMenu" class="enhanced-menu">
+      @for (resource of resources; track resource.name) {
+        <button mat-menu-item (click)="selectResource(resource)">
+          <mat-icon class="menu-icon">collections_bookmark</mat-icon>
+          <span>{{ resource.displayName }}</span>
         </button>
       }
     </mat-menu>
 
-    <button mat-icon-button [matMenuTriggerFor]="promptsMenu" class="action-button">
+    <button 
+      mat-icon-button 
+      [matMenuTriggerFor]="promptsMenu" 
+      class="action-button"
+      matTooltip="Prompts"
+    >
       <mat-icon class="icon-small">lightbulb</mat-icon>
     </button>
-    <mat-menu #promptsMenu="matMenu" class="action-menu">
-      @for (prompt of prompts; track prompt) {
-        <button mat-menu-item (click)="selectPrompt(prompt.name)">
-          <span>{{prompt.name}}</span>
+    <mat-menu #promptsMenu="matMenu" class="enhanced-menu">
+      @for (prompt of prompts; track prompt.name) {
+        <button mat-menu-item (click)="selectPrompt(prompt)">
+          <mat-icon class="menu-icon">lightbulb</mat-icon>
+          <span>{{ prompt.displayName }}</span>
         </button>
       }
     </mat-menu>
   </div>
 
-  @if (selectedTool || selectedResource || selectedPrompt) {
-    <div class="selected-items">
-      @if (selectedTool) {
-        <span class="selected-item">
-          <mat-icon class="icon-xsmall">build</mat-icon>
-          <span>{{selectedTool}}</span>
-        </span>
-      }
-      @if (selectedResource) {
-        <span class="selected-item">
-          <mat-icon class="icon-xsmall">collections_bookmark</mat-icon>
-          <span>{{selectedResource}}</span>
-        </span>
-      }
-      @if (selectedPrompt) {
-        <span class="selected-item">
-          <mat-icon class="icon-xsmall">lightbulb</mat-icon>
-          <span>{{selectedPrompt}}</span>
-        </span>
-      }
 
-    </div>
-  }
+@if (selectedTool || selectedResource || selectedPrompt) {
+  <div class="selected-items">
+    @if (selectedTool) {
+      <span class="selected-item" (click)="clearSelection('tool', selectedTool)">
+        <mat-icon class="icon-xsmall">build</mat-icon>
+        {{ selectedTool.displayName }}
+        <!-- Optional close button -->
+        <span class="chip-close">×</span>
+      </span>
+    }
+    @if (selectedResource) {
+      <span class="selected-item" (click)="clearSelection('resource', selectedResource)">
+        <mat-icon class="icon-xsmall">collections_bookmark</mat-icon>
+        {{ selectedResource.displayName }}
+        <span class="chip-close">×</span>
+      </span>
+    }
+    @if (selectedPrompt) {
+      <span class="selected-item" (click)="clearSelection('prompt', selectedPrompt)">
+        <mat-icon class="icon-xsmall">lightbulb</mat-icon>
+        {{ selectedPrompt.displayName }}
+        <span class="chip-close">X</span>
+      </span>
+    }
+  </div>
+}
 </div>

@@ -7,6 +7,7 @@
   </div>
 
   <div class="sidebar-scrollable">
+    @if (chats.length > 0){
     <mat-nav-list>
       @for (chat of chats; track chat) {
       <mat-list-item>
@@ -15,6 +16,7 @@
       </mat-list-item>
       }
     </mat-nav-list>
+    }
   </div>
 
   <div class="sidebar-footer">

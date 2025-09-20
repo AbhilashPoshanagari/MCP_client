@@ -55,7 +55,8 @@ export class OpenAiService {
                         apiKey: this.openAI_key,
                         model: 'gpt-4o-mini',
                         temperature: 0,
-                        maxTokens: 512
+                        maxTokens: 512,
+                        streaming: true
                         });                   
     return this.langchain_model
   }
@@ -78,33 +79,5 @@ openAImodels(type: string = "langchain", open_ai_model:any, tools: Array<any>, s
     // const agent = await createToolCallingAgent({ llm: llm_with_functions, tools, prompt });
     return {mode_with_tools: llm_with_functions, overall_prompt: prompt};      
   }
-
-// fetchOpenAIfuncs(url: string){
-//   return this.restApiService.getRequest(url);
-// }
-
-// async createAgent(question: string): Promise<void> {
-//     const llm = await this.getOpenAiClient();                  
-//     this.fetchOpenAIfuncs(this.openAi_format).subscribe(async (res: any) => {
-//         if(res.status == 200){
-//           const agent = createReactAgent({
-//                   llm: llm,
-//                   tools: res.open_ai
-//                 });
-
-//                 const agentNextState = await agent.invoke({ 
-//                   messages: [new HumanMessage(question)] },
-//                   { configurable: { thread_id: "42" } });
-//               console.log("Agent Next State:", agentNextState);
-//               console.log(
-//                     agentNextState.messages[agentNextState.messages.length - 1].content,
-//                   );
-//               return agentNextState
-//         }else {
-//           console.log("Error : ")
-//           return "Error"
-//         }
-//       });
-//   }
   
 }

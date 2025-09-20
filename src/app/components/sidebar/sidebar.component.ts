@@ -26,12 +26,12 @@ interface Tool extends NamedItem {
   standalone: true
 })
 export class SidebarComponent implements OnInit {
-  chats = [
-    { title: 'New Chat', icon: 'add' },
-    { title: 'Project Discussion', icon: 'chat' },
-    { title: 'Code Review', icon: 'code' },
-    { title: 'Documentation Help', icon: 'description' }
-  ];
+  chats: Array<any> = []
+    // { title: 'New Chat', icon: 'add' },
+    // { title: 'Project Discussion', icon: 'chat' },
+    // { title: 'Code Review', icon: 'code' },
+    // { title: 'Documentation Help', icon: 'description' }
+  // ];
 
   // prompts: Array<NamedItem> = [{ name: 'No prompts available' }];
   // tools: Array<Tool> = [{ name: 'No tools available', description: '', parameters: {} }];

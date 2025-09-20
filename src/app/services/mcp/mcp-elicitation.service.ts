@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { McpService } from '../mcp.service';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -11,27 +11,21 @@ export class McpElicitationService {
   private currentForm = new BehaviorSubject<FormGroup | null>(null);
   private currentSchema = new BehaviorSubject<any>(null);
   private currentRequestId = new BehaviorSubject<string | number | null>(null);
-  
+
   constructor(
     private fb: FormBuilder,
     private mcpService: McpService
   ) {
+    
     // Listen for MCP elicit requests
-    // this.mcpService.initializeElicitationHandler();
       this.mcpService.elicitRequests$.subscribe(request => {
         console.log("request : ", request);
-      this.currentSchema.next(request.schema);
       this.createFormFromSchema(request.schema);
     });
   }
 
-  // private handleElicitRequest(request: any, requestId: number | string): void {
-  //   this.currentRequestId.next(requestId);
-  //   this.currentSchema.next(request.schema);
-  //   this.createFormFromSchema(request.schema);
-  // }
-
-  private createFormFromSchema(schema: any): void {
+  public createFormFromSchema(schema: any, title: string = "Elicitation Request"): void {
+    this.currentSchema.next({schema: schema, title: title});
     const formGroup = this.fb.group({});
     const properties = schema.properties;
     const required = schema.required || [];
@@ -39,6 +33,7 @@ export class McpElicitationService {
     for (const [fieldName, fieldSchema] of Object.entries(properties)) {
       const field = fieldSchema as any;
       const validators = [];
+      console.log("Field : ", field);
 
       if (required.includes(fieldName)) {
         validators.push(Validators.required);
@@ -70,7 +65,6 @@ export class McpElicitationService {
         this.fb.control(field.default || null, validators)
       );
     }
-
     this.currentForm.next(formGroup);
   }
 

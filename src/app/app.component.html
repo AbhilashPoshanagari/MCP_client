@@ -3,7 +3,7 @@
     <mat-sidenav #sidenav mode="side" [(opened)]="isSidebarOpen" class="sidebar">
       <!-- <button (click)="connect()">Connect</button> -->
        <app-mcp-client></app-mcp-client>
-       <app-elicitation></app-elicitation>
+       <app-elicitation [tool]="selectedTool" (sendToolResponse)="tool_response($event)"></app-elicitation>
       <app-sidebar></app-sidebar>
     </mat-sidenav>
     
@@ -17,7 +17,7 @@
       
       <div class="chat-container">
         <app-chatbot [messages]="chatMessages"></app-chatbot>
-        <app-input-box (sendMessage)="agentWorkflow($event)" ></app-input-box>
+        <app-input-box (sendMessage)="agentWorkflow($event)" (sendTool)="testTool($event)"></app-input-box>
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>

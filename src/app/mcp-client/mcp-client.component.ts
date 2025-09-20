@@ -40,7 +40,9 @@ export class McpClientComponent implements OnInit, OnDestroy {
         this.currentElicitRequest = request;
       })
     );
-    // this.connect();
+    setTimeout(() => {
+          this.connect();
+    }, 500);
   }
 
   async connect() {

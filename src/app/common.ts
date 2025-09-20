@@ -4,6 +4,7 @@ export interface NamedItem {
     description?: string; // Optional for additional information
     uri?: string; // Optional for resources
     parameters?: any; // Optional for tools
+    inputSchema: any;
 }
 
 export interface OpenAIFunctions {

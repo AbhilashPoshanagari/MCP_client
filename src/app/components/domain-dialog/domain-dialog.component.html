@@ -1,0 +1,27 @@
+<div class="dialog-container">
+        <h2>{{data.title}}</h2>
+        
+        <div class="input-container">
+            <label class="input-label">{{data.message}}</label>
+            <input matInput class="input-field" [(ngModel)]="server" type="text" [placeholder]="data.placeholder">
+        </div>
+        <p *ngIf="server" class="error-message"> {{server}}</p>
+        <p *ngIf="errorMessage" class="error-message"> {{errorMessage}}</p>
+        
+        <div class="button-group">
+            <button class="cancel-btn" (click)="close()">{{data.cancelText}}</button>
+            <button class="save-btn" (click)="saveDomain()">{{data.confirmText}}</button>
+        </div>
+  </div>
+  
+  <!-- <div class="dialog-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Connect to server</mat-label>
+          <input matInput [(ngModel)]="server" placeholder="Enter domain name">
+        </mat-form-field>
+        <p *ngIf="server" class="error-message"> {{server}}</p>
+        <p *ngIf="errorMessage">{{errorMessage}}</p>
+        <button mat-button (click)="saveDomain()" color="primary">Save</button>
+  </div> -->
+  
+

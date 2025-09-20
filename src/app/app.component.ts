@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, model, signal, ChangeDetectionStrategy } from '@angular/core';
 // import { RouterOutlet } from '@angular/router';
 import { McpService } from './services/mcp.service';
 import { InputBoxComponent } from './components/input-box/input-box.component';
@@ -16,6 +16,15 @@ import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { ElicitationComponent } from './components/elicitation/elicitation.component';
 import { McpElicitationService } from './services/mcp/mcp-elicitation.service';
+import { DomainDialogComponent } from './components/domain-dialog/domain-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
+import { StorageService } from './services/storage.service';
+import { OpenAITool } from './constants/toolschema';
+interface DialogData {
+  page: string;
+  server: string;
+  open_ai_token: string;
+}
 @Component({
   selector: 'app-root',
   imports: [InputBoxComponent, ChatbotComponent, SidebarComponent, MatSidenavModule, McpClientComponent,
@@ -23,7 +32,9 @@ import { McpElicitationService } from './services/mcp/mcp-elicitation.service';
   standalone: true,
   providers: [McpService, McpElicitationService],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.css'
+  styleUrl: './app.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+
 })
 export class AppComponent {
   messages: any[] = [];
@@ -40,35 +51,63 @@ export class AppComponent {
   human_prompt: string = '';
   llm_runnable: any;
   selectedTool: NamedItem | null = null;
+  readonly page = signal('');
+  readonly openAiKey = model('');
+  readonly dialog = inject(MatDialog);
+
   constructor(private mcpService: McpService, private openAIService: OpenAiService, 
+    private storageService: StorageService,
     private mcpElicitationService: McpElicitationService, private cdr: ChangeDetectorRef) {
-
     this.system_prompt = "You are a helpful assistant. Use tools *only* when needed. \
-     If you already have the answer, reply normally instead of calling a tool again.";
+    If you already have the answer, reply normally instead of calling a tool again.";
     this.human_prompt = "{input}";
-    this.openAIService.getOpenAIFunctions().subscribe(result => {
-      if (result.status === 200) {
-         try {
-            this.llm_model = this.openAIService.getOpenAiClient()
-            this.llm_with_tools = this.openAIService.openAImodels("langchain", 
-            this.llm_model,
-            result.open_ai,
-            this.system_prompt,
-            this.human_prompt
-            )
-            this.llm_runnable = RunnableSequence.from([
-                    this.llm_with_tools.overall_prompt,
-                    this.llm_with_tools.mode_with_tools
-                  ]);
+    // Initialize with stored token or empty string
+    const storedToken = this.storageService.getValueFromKey('open_ai_token') || '';
+    this.openAiKey.set(storedToken);
+    // Check if we need to show dialog (no token exists)
+    if (!storedToken) {
+      // Use setTimeout to ensure component is fully initialized
+    } else {
+      // Only initialize OpenAI if we have a token
+      this.InitializeLLM(storedToken);
+    }
+  }
 
-          } catch (error) {
-            
+  InitializeLLM(token: string, tools: OpenAITool[] = []){
+        // this.openAIService.getOpenAIFunctions(token).subscribe(result => {
+        //   if (result.status === 200) {
+        this.llm_model = this.openAIService.getOpenAiClient(token)  
+        if (tools.length > 0){
+            try {
+                this.llm_with_tools = this.openAIService.openAImodels("langchain", 
+                this.llm_model,
+                tools,
+                this.system_prompt,
+                this.human_prompt
+                );
+                this.llm_runnable = RunnableSequence.from([
+                        this.llm_with_tools.overall_prompt,
+                        this.llm_with_tools.model_with_tools
+                      ]);
+
+              } catch (error) {
+                
+              }
+          } else {
+            // this.errorMessage = result.message;
+            // console.error('Error loading OpenAI functions:', result.message);
+                this.llm_with_tools = this.openAIService.openAImodels("langchain", 
+                this.llm_model,
+                [],
+                this.system_prompt,
+                this.human_prompt
+                );
+                this.llm_runnable = RunnableSequence.from([
+                        this.llm_with_tools.overall_prompt,
+                        this.llm_with_tools.model_with_out_tools
+                      ]);
           }
-      } else {
-        this.errorMessage = result.message;
-        console.error('Error loading OpenAI functions:', result.message);
-      }
-    });
+        // });
   }
 
   toggleSidebar() {
@@ -80,10 +119,12 @@ export class AppComponent {
 //       content: messages,
 //       timestamp: new Date() });
 // }
+toolsList(tools: OpenAITool[]){
+  this.InitializeLLM(this.openAiKey(), tools)
+}
 
 testTool(tool: NamedItem | null){
   if(tool){
-    console.log("Tool : ", tool)
     this.selectedTool = tool;
     this.mcpElicitationService.createFormFromSchema(tool.inputSchema, "Tool test")
   }else {
@@ -132,16 +173,12 @@ async agentWorkflow(userInput: string) {
     }
         //  Tool call expected
         if (fullChunk?.tool_calls && fullChunk.tool_calls.length > 0) {
-          console.log("Open AI func res : ", firstStream.tool_calls)
           const tool_call = fullChunk.tool_calls[0];  // handle one tool for now
 
           const toolArgs = tool_call.args;
           const toolName = tool_call.name;
 
-          console.log(`Tool call: ${toolName}(${JSON.stringify(toolArgs)})`);
-
           const rag_response: any = await this.mcpService.callTool(toolName, toolArgs);
-          console.log("rag response : ", rag_response)
           const toolOutput = rag_response["content"].map((content:{type: string, text: string}) => content.text).join('\n');
           // const toolOutput = rag_response["content"][0]["text"].result;
           this.chatMessages.push({sender: 'bot', content: toolOutput, timestamp: new Date() });
@@ -188,8 +225,8 @@ async agentWorkflow(userInput: string) {
       timestamp: new Date()
     });
   }
- 
  }
+
 
 
 }

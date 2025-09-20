@@ -1,8 +1,7 @@
 <div class="app-container">
   <mat-sidenav-container class="sidenav-container">
     <mat-sidenav #sidenav mode="side" [(opened)]="isSidebarOpen" class="sidebar">
-      <!-- <button (click)="connect()">Connect</button> -->
-       <app-mcp-client></app-mcp-client>
+       <app-mcp-client (tools)="toolsList($event)" (sendOpenAiKey)="InitializeLLM($event)"></app-mcp-client>
        <app-elicitation [tool]="selectedTool" (sendToolResponse)="tool_response($event)"></app-elicitation>
       <app-sidebar></app-sidebar>
     </mat-sidenav>

@@ -3,7 +3,6 @@ import { Observable, from, Subject, BehaviorSubject, shareReplay } from 'rxjs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { getDisplayName } from '@modelcontextprotocol/sdk/shared/metadataUtils.js';
-import { urls } from '../apiUrl';
 import {
   ListToolsRequest,
   ListToolsResultSchema,
@@ -28,8 +27,8 @@ import {
   CreateMessageRequestSchema,
   ProgressNotificationSchema
 } from '@modelcontextprotocol/sdk/types.js';
-import Ajv from "ajv";
-import { switchMap, expand, takeWhile, finalize } from 'rxjs/operators';
+import { ToolformatterService } from './toolformatter.service';
+import { OriginalTool, OpenAITool } from '../constants/toolschema';
 
 export interface ElicitPrompt {
   message: string;
@@ -54,7 +53,7 @@ export interface ElicitField {
 
 @Injectable({ providedIn: 'root' })
 export class McpService {
-  private serverUrl = urls.mcp_base_url;
+  // private serverUrl = urls.mcp_base_url;
   public client: Client | null = null;
   private transport: StreamableHTTPClientTransport | null = null;
   public sessionId: string | undefined = undefined;
@@ -91,10 +90,10 @@ export class McpService {
   public elicitResponses$ = this.elicitResponseSubject.asObservable();
   public notificationsToolLastEventId: string | undefined = undefined;
 
-  constructor() {}
+  constructor( private toolformatterService: ToolformatterService) {}
 
-  async connect(url?: string): Promise<void> {
-    let serverUrl = url || this.serverUrl;
+  async connect(url: string): Promise<void> {
+    let serverUrl = url;
     if (this.client) {
     await this.disconnect(); // Clean up existing connection first
   }
@@ -286,9 +285,10 @@ initializeElicitationHandler(client: Client): void {
 // Add this method to handle reconnection with existing session
 async reconnect(): Promise<void> {
   const storedSessionId = localStorage.getItem('mcp_session_id');
-  if (storedSessionId) {
+  const mcp_server_url = localStorage.getItem('mcp_server');
+  if (storedSessionId && mcp_server_url) {
     this.sessionId = storedSessionId;
-    await this.connect();
+    await this.connect(mcp_server_url);
   } else {
     throw new Error('No stored session ID found');
   }
@@ -304,116 +304,6 @@ samplingCapability(client: Client){
       },
     }));
 }
-
-// renderElicitationUI(schema: any): Promise<any>{
-
-//  return new Promise((resolve) => {
-//           // Create modal container
-//           const modal = document.createElement('div');
-//           modal.style.position = 'fixed';
-//           modal.style.top = '0';
-//           modal.style.left = '0';
-//           modal.style.width = '100%';
-//           modal.style.height = '100%';
-//           modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-//           modal.style.display = 'flex';
-//           modal.style.justifyContent = 'center';
-//           modal.style.alignItems = 'center';
-//           modal.style.zIndex = '1000';
-          
-//           // Create form container
-//           const form = document.createElement('div');
-//           form.style.backgroundColor = 'white';
-//           form.style.padding = '20px';
-//           form.style.borderRadius = '8px';
-//           form.style.maxWidth = '500px';
-//           form.style.width = '100%';
-          
-//           // Add title (with fallback)
-//           const title = document.createElement('h2');
-//           title.textContent = schema?.title || "Please provide additional information";
-//           form.appendChild(title);
-          
-//           // Create form fields with proper validation
-//           const formData: any = {};
-//           const fields = schema?.fields || [];
-          
-//           fields.forEach((field: any) => {
-//             const fieldContainer = document.createElement('div');
-//             fieldContainer.style.marginBottom = '15px';
-            
-//             const label = document.createElement('label');
-//             label.textContent = field?.label || field?.name || 'Field';
-//             label.style.display = 'block';
-//             label.style.marginBottom = '5px';
-//             fieldContainer.appendChild(label);
-            
-//             if (field?.type === 'boolean') {
-//               const checkbox = document.createElement('input');
-//               checkbox.type = 'checkbox';
-//               checkbox.id = field.name;
-//               checkbox.checked = false; // Default value
-//               checkbox.addEventListener('change', (e) => {
-//                 formData[field.name] = (e.target as HTMLInputElement).checked;
-//               });
-//               fieldContainer.appendChild(checkbox);
-//             } 
-//             else if (field?.type === 'select') {
-//               const select = document.createElement('select');
-//               select.id = field.name;
-//               select.style.width = '100%';
-//               select.style.padding = '8px';
-              
-//               // Add options
-//               const options = field?.options || [];
-//               options.forEach((option: string) => {
-//                 const optionElement = document.createElement('option');
-//                 optionElement.value = option;
-//                 optionElement.textContent = option;
-//                 select.appendChild(optionElement);
-//               });
-              
-//               // Set default value
-//               formData[field.name] = options[0] || '';
-//               select.addEventListener('change', (e) => {
-//                 formData[field.name] = (e.target as HTMLSelectElement).value;
-//               });
-//               fieldContainer.appendChild(select);
-//             }
-//             else {
-//               const input = document.createElement('input');
-//               input.type = field?.type || 'text';
-//               input.id = field?.name || `field-${Math.random().toString(36).substring(2, 9)}`;
-//               input.style.width = '100%';
-//               input.style.padding = '8px';
-//               input.addEventListener('input', (e) => {
-//                 formData[field.name] = (e.target as HTMLInputElement).value;
-//               });
-//               fieldContainer.appendChild(input);
-//             }
-            
-//             form.appendChild(fieldContainer);
-//           });
-          
-//           // Add submit button
-//           const submitButton = document.createElement('button');
-//           submitButton.textContent = 'Submit';
-//           submitButton.style.padding = '8px 16px';
-//           submitButton.style.backgroundColor = '#007bff';
-//           submitButton.style.color = 'white';
-//           submitButton.style.border = 'none';
-//           submitButton.style.borderRadius = '4px';
-//           submitButton.style.marginTop = '10px';
-//           submitButton.addEventListener('click', () => {
-//             document.body.removeChild(modal);
-//             resolve(formData);
-//           });
-//           form.appendChild(submitButton);
-          
-//           modal.appendChild(form);
-//           document.body.appendChild(modal);
-//         });
-// }
 
 private handleElicitRequest(request: any): void {
     const schema = request.params.requestedSchema;
@@ -466,19 +356,14 @@ private parseSchemaToFields(schema: any): any[] {
         tool['displayName'] = getDisplayName(tool)
       }
     this.toolsSubject.next(toollist.tools)
+    console.log("Tools : ", toollist.tools);
   }
 
-  // async callTool(toolId: string, parameters: any){
-  //   if (!this.client) {
-  //     throw new Error('Client not connected');
-  //   }
 
-  //   return await this.client.callTool({
-  //               name: toolId,
-  //               arguments: parameters
-  //               });;
-  // }
-
+  createOpenAiToolSchema(mcpTool: OriginalTool[]): OpenAITool[] {
+    const openai_tools = this.toolformatterService.formatMultipleTools(mcpTool);
+    return openai_tools;
+  }
 
   async listPrompts() {
     if (!this.client) {

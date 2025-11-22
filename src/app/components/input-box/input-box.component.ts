@@ -104,6 +104,7 @@ export class InputBoxComponent implements OnInit, OnDestroy {
     this.resources = this.resources.filter(resource => resource.name !== selected_resource.name);
     this.selectedResource = selected_resource;
     this.showResourcesMenu = false;
+    // this.mcpService.readResource()
   }
 
   selectPrompt(selected_prompt: NamedItem) {

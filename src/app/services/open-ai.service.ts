@@ -61,6 +61,7 @@ export class OpenAiService {
 openAImodels(type: string = "langchain", open_ai_model:any, tools: Array<any>, systemPrompt: string, humanPrompt: string) {
     let llm_with_functions: any = null;
     let llm_with_out_functions: any = null;
+    // console.log("Tools : ", tools)
     if(type=="langgraph"){
       llm_with_functions = createReactAgent({
                   llm: open_ai_model,

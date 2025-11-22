@@ -19,13 +19,14 @@ export class McpElicitationService {
     
     // Listen for MCP elicit requests
       this.mcpService.elicitRequests$.subscribe(request => {
-        console.log("request : ", request);
+        // console.log("request : ", request);
       this.createFormFromSchema(request.schema);
     });
   }
 
   public createFormFromSchema(schema: any, title: string = "Elicitation Request"): void {
     this.currentSchema.next({schema: schema, title: title});
+    console.log("Schema : ", schema);
     const formGroup = this.fb.group({});
     const properties = schema.properties;
     const required = schema.required || [];
@@ -33,7 +34,7 @@ export class McpElicitationService {
     for (const [fieldName, fieldSchema] of Object.entries(properties)) {
       const field = fieldSchema as any;
       const validators = [];
-      console.log("Field : ", field);
+      // console.log("Field : ", field);
 
       if (required.includes(fieldName)) {
         validators.push(Validators.required);

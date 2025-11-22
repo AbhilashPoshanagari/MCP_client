@@ -16,7 +16,7 @@
 
 /* Sidebar styling */
 .sidebar {
-  width: 340px;
+  width: 400px;
   background-color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -64,11 +64,45 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 900px;
   width: 100%;
   margin: 0 auto;
   position: relative;
   overflow: hidden;
+}
+
+/* Allow layout messages to break out of container */
+.chat-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  /* overflow-y: auto; */
+  padding: 20px;
+  padding-bottom: 100px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-content-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+/* Force full width for layout containers */
+::ng-deep .message-container.layout-message {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-left: -20px !important;
+  margin-right: -20px !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
+}
+
+::ng-deep .layout-message .message-content {
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 /* Chat area (where messages appear) */
@@ -94,3 +128,23 @@
   border-top: 1px solid #eaeaea; */
   /* z-index: 10; */
 }
+
+/* NEW: Special full-width container for layout messages */
+.full-width-layout {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure app-chatbot takes full width when needed */
+app-chatbot {
+  width: 100%;
+}
+
+/* Input area (sticky at bottom) */
+.chat-container > :last-child {
+  position: sticky;
+  bottom: 0;
+}
+

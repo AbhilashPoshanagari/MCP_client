@@ -28,11 +28,13 @@
             ],
             "styles": [
               "src/styles.css",
-              "node_modules/prismjs/themes/prism-okaidia.css"
+              "node_modules/prismjs/themes/prism-okaidia.css",
+              "node_modules/leaflet/dist/leaflet.css"
             ],
             "scripts": [
               "node_modules/prismjs/prism.js",
-              "node_modules/prismjs/components/prism-css.min.js"
+              "node_modules/prismjs/components/prism-css.min.js",
+              "node_modules/leaflet/dist/leaflet.js"
             ]
           },
           "configurations": {

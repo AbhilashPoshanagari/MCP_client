@@ -1,15 +1,16 @@
 // elicitation.component.ts
-import { Component, OnDestroy, OnInit, Output, EventEmitter, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnDestroy, OnInit, Output, EventEmitter, Input, OnChanges, NgZone, SimpleChanges } from '@angular/core';
 import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { McpElicitationService } from '../../services/mcp/mcp-elicitation.service';
 import { Observable, Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { McpService } from '../../services/mcp.service';
 import { NamedItem } from '../../common';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-elicitation',
-  imports: [FormsModule, ReactiveFormsModule, CommonModule],
+  imports: [FormsModule, ReactiveFormsModule, CommonModule, MatProgressSpinnerModule],
   templateUrl: './elicitation.component.html',
   styleUrls: ['./elicitation.component.css'],
   standalone: true
@@ -23,26 +24,32 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
   showConfirmation = false;
   submittedData: any;
   formAvailable: boolean = false;
+  waitingForResponse: boolean = false;
   title: string = "";
-  @Output() sendToolResponse = new EventEmitter<{request: string, response: string}>();
+  @Output() sendToolResponse = new EventEmitter<{response: string, toolCall: boolean, layouts?: Array<any>}>();
+  @Output() sendToolRequest = new EventEmitter<{request: string}>();
+
   private subscriptions: Subscription[] = [];
 
   constructor(
-    private elicitationService: McpElicitationService, private mcpService: McpService
+    private elicitationService: McpElicitationService, private mcpService: McpService, private ngZone: NgZone
   ) {
     this.form$ = this.elicitationService.getCurrentForm();
     this.schema$ = this.elicitationService.getCurrentSchema();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    console.log("UI update: ", changes);
     if(!this.tool?.name && this.title != "Elicitation Request"){
       this.formAvailable = false;
+      this.waitingForResponse = false;
     }
   }
 
   ngOnInit(): void {
     this.subscriptions.push(
       this.schema$.subscribe(schema => {
+        this.waitingForResponse = false;
         this.currentRequest = schema?.schema;
         this.title = schema?.title;
         this.formAvailable = true;
@@ -54,17 +61,8 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
     this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
-    confirmSubmission(confirm: boolean): void {
-      // if(this.submittedData && this.submittedData.password){
-      //   const password = data.password;
-      //   const maskedPassword = password.length > 2 
-      //   ? password[0] + '****' + password.slice(-1) 
-      //   : '****';
-
-      //   const partiallyMasked = { ...data, password: maskedPassword };
-      //   console.log(partiallyMasked);
-      // }
-
+  confirmSubmission(confirm: boolean): void {
+    this.waitingForResponse = false;
      if (confirm) {
       this.elicitationService.submitResponse({
         action: 'accept',
@@ -77,6 +75,11 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
     }
     this.resetForm();
     this.formAvailable = false;
+  }
+
+  onEdit(): void {
+    this.showConfirmation = false;
+    this.formAvailable = true;
   }
 
   cancel(): void {
@@ -119,8 +122,14 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
       this.validationErrors = ['Data does not match the required schema.'];
       return;
     }
+    Object.keys(formData).forEach(key => {
+      if(formData[key] === null || formData[key] === undefined){
+        delete formData[key];
+      }
+    });
     this.submittedData = formData;
     if(this.title === "Tool test"){
+      this.sendToolRequest.emit({request: JSON.stringify(formData)})
       this.toolCall(formData)
     }else{
       this.showConfirmation = true;
@@ -129,16 +138,47 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
 
   async toolCall(formData: any){
     if(this.tool?.name){
+      console.log("Tool name : ", this.tool.name)
       try {
         let rag_response: any = {};
         if(this.tool?.description == "long running task"){
-        rag_response = await this.mcpService.longRunningTool(this.tool?.name, formData);
+          this.waitingForResponse = true;
+          rag_response = await this.mcpService.longRunningTool(this.tool?.name, formData);
+          this.waitingForResponse = false;
         }else{
-        rag_response = await this.mcpService.callTool(this.tool?.name, formData);
+          this.waitingForResponse = true;
+          rag_response = await this.mcpService.longRunningTool(this.tool?.name, formData);
+          this.waitingForResponse = false;
         }
-        this.sendToolResponse.emit({request: JSON.stringify(formData), response : rag_response["content"][0]["text"]})
+        // console.log("RAG tool response : ", rag_response["content"][0]["text"])
+          try {
+             const extract_results = JSON.parse(rag_response["content"][0]["text"])
+              const server_keys = Object.keys(extract_results);
+              if(server_keys.includes("layouts")){
+
+                  const { layouts, ...contentWithoutLayouts } = extract_results;
+                  this.sendToolResponse.emit({
+                    response : "```json \n " + JSON.stringify(contentWithoutLayouts, null, 2) + "\n```",
+                    layouts: extract_results.layouts,
+                    toolCall: true
+                  })
+              }else {
+                  this.sendToolResponse.emit({toolCall: true, response : rag_response["content"][0]["text"]})
+              }
+          } catch (e) {
+            // Handle plain text response
+            this.sendToolResponse.emit({toolCall: true, response : rag_response["content"][0]["text"]})
+          }
+        this.resetForm();
+        this.formAvailable = false;
       } catch (error) {
-        console.log("Sothing went worng : ", error)
+        this.ngZone.run(() => {
+          this.validationErrors = ['Error occurred while calling the tool. Please try again.'];
+          console.log("Sothing went worng : ", error)
+          this.waitingForResponse = false;
+          this.resetForm();
+          this.formAvailable = false;
+        });
       }
     }else {
       console.log("Tool name not received : ", this.tool?.name)
@@ -220,7 +260,11 @@ getFieldMax(schema: any, fieldName: string): number | null {
 }
 
 getFieldOptions(schema: any, fieldName: string): any[] {
-  return schema?.properties[fieldName]?.enum || [];
+  return schema?.properties[fieldName]?.options || [];
+}
+
+getFieldExamples(schema: any, fieldName: string): any[] {
+  return schema?.properties[fieldName]?.examples || '';
 }
 
 isFieldRequired(schema: any, fieldName: string): boolean {

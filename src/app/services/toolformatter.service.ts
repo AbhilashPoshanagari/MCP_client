@@ -16,9 +16,10 @@ export class ToolformatterService {
         description = originalTool.annotations[key]?originalTool.annotations[key].description:null;
       }
       properties[key] = {
-        type: value.type,
+        type: value.type || 'object',
         description: description?description: `user questions on ${originalTool.title}`
       };
+      // console.log("properties : ", properties)
     });
 
     return {

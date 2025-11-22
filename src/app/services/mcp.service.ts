@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, from, Subject, BehaviorSubject, shareReplay } from 'rxjs';
+import { Observable, from, Subject, BehaviorSubject, shareReplay, timeout } from 'rxjs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { getDisplayName } from '@modelcontextprotocol/sdk/shared/metadataUtils.js';
@@ -25,12 +25,16 @@ import {
   ResourceSchema,
   ElicitResultSchema,
   CreateMessageRequestSchema,
-  ProgressNotificationSchema
+  ProgressNotificationSchema,
+  ElicitRequest,
+  ElicitResult
 } from '@modelcontextprotocol/sdk/types.js';
 import { ToolformatterService } from './toolformatter.service';
 import { OriginalTool, OpenAITool } from '../constants/toolschema';
+import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 
 export interface ElicitPrompt {
+  requestId: number | string;
   message: string;
   schema: any;
   fields: ElicitField[];
@@ -62,6 +66,7 @@ export class McpService {
   // Subjects for handling events and state
   public connectionStatusSubject = new BehaviorSubject<boolean>(false);
   private notificationsSubject = new Subject<any>();
+  private streamingSubject = new Subject<any>();
   private elicitRequestSubject = new Subject<ElicitPrompt>();
   
   // Public observables
@@ -71,12 +76,15 @@ export class McpService {
   //                         );
   public notifications$ = this.notificationsSubject.asObservable();
   public elicitRequests$ = this.elicitRequestSubject.asObservable();
-
+  public streaming$ = this.streamingSubject.asObservable();
   // Tools 
   private toolsSubject = new BehaviorSubject<Array<any>>([]);
   private promptsSubject = new BehaviorSubject<Array<any>>([]);
   private resourceSubject = new BehaviorSubject<Array<any>>([]);
-  
+
+  private mcpServerInstructionsSubject = new Subject<string | undefined>();
+  public mcpServerInstructions$ = this.mcpServerInstructionsSubject.asObservable();
+
   // Public observables
   public tools$ = this.toolsSubject.asObservable();
   public promtps$ = this.promptsSubject.asObservable();
@@ -107,8 +115,11 @@ export class McpService {
         version: '1.0.0'
       }, {
         capabilities: {
-          elicitation: {},
+          elicitation: {
+            form: {}
+          },
           sampling: {},
+          completions: {}
         },
       });
 
@@ -163,18 +174,20 @@ export class McpService {
       this.resourceListChangingHandler(this.client);
 
       // Connect the client
-      await this.client.connect(this.transport);
+      await this.client.connect(this.transport, {timeout: 420000, maxTotalTimeout: 420000});
+      this.mcpServerInstructionsSubject.next(this.client.getInstructions())
       this.sessionId = this.transport.sessionId;
       if (this.sessionId) {
         localStorage.setItem('mcp_session_id', this.sessionId);
       }
-      console.log('Transport created with session ID:', this.sessionId);
+      // console.log('Transport created with session ID:', this.sessionId);
       console.log('Connected to MCP server');
       this.connectionStatusSubject.next(true);
       this.messageSource.next(true)
       this.listTools()
       this.listPrompts()
       this.listResources()
+      // this.completion()
     } catch (error) {
       console.error('Failed to connect:', error);
       this.client = null;
@@ -187,6 +200,31 @@ export class McpService {
       throw error; // Re-throw to allow error handling by caller
     }
   }
+
+async completion(argumentName: string, partialValue: string, previousArgument: string = ""){
+  // Request completions for any argument
+  try {
+      const result = await this.client?.complete({
+      ref: {
+          type: 'ref/prompt', // or "ref/resource"
+          name: 'example' // or uri: "template://..."
+      },
+      argument: {
+          name: argumentName,
+          value: partialValue // What the user has typed so far
+      },
+      context: {
+          // Optional: Include previously resolved arguments
+          arguments: {
+              previousArg: previousArgument
+          }
+      }
+  });
+  return result;
+  } catch (error) {
+    throw new Error(`Error : ${JSON.stringify(error)}`);
+  }
+}
 
 resourceListChangingHandler(client: Client){
   client.setNotificationHandler(ResourceListChangedNotificationSchema, async (_) => {
@@ -224,20 +262,60 @@ resourceListChangingHandler(client: Client){
 loggingNotificationHandler(client: Client){
     // Set up notification handlers
   client.setNotificationHandler(LoggingMessageNotificationSchema, (notification) => {
-      this.notificationCount++;
-      const notificationMessage = {
-        type: 'log',
-        level: notification.params.level,
-        message: notification.params.data,
-        count: this.notificationCount
-      };
-      console.log('MCP Notification:', notificationMessage);
-      this.notificationsSubject.next(notificationMessage);
+      let notificationObject: any = {type: "", message: "", status: ""};
+      if(notification.params.data && typeof notification.params.data === 'object'){
+        notificationObject = {type: "", message: "", status: ""};
+        const keys = Object.keys(notification.params.data);
+        notificationObject = notification.params.data;
+        for(const key of keys){
+          if(notificationObject[key] == "streaming"){
+            const notificationMessage = {
+                      type: notificationObject[key],
+                      level: notification.params.level,
+                      message: notificationObject.message,
+                      status: notificationObject.status
+                    };
+            this.streamingSubject.next(notificationMessage);
+          }
+        }
+      }
+      else {
+        this.notificationCount++;
+        const notificationMessage = {
+          type: 'log',
+          level: notification.params.level,
+          message: notification.params.data,
+          count: this.notificationCount
+        };
+          console.log('MCP Notification:', notificationMessage);
+        this.notificationsSubject.next(notificationMessage);
+      }
+
     });
 }
 
 progressNotificationHandler(client: Client){
   client.setNotificationHandler(ProgressNotificationSchema, (notification) => {
+    let notificationObject: any = {type: "", message: "", status: ""};
+      if(notification.params.message && typeof notification.params.message === 'object'){
+        notificationObject = {type: "", message: "", status: ""};
+        const keys = Object.keys(notification.params.message);
+        notificationObject = notification.params.message;
+        for(const key of keys){
+          if(notificationObject[key] == "streaming"){
+            const notificationMessage = {
+                      type: notificationObject[key],
+                      progress: notification.params.progress,
+                      total: notification.params.total,
+                      message: notificationObject.message,
+                      progressToken: notification.params.progressToken,
+                      status: notificationObject.status
+                    };
+            this.streamingSubject.next(notificationMessage);
+          }
+        }
+      }
+      else {
     console.log("On progress : ", notification)
       this.notificationCount++;
       const notificationMessage = {
@@ -250,34 +328,106 @@ progressNotificationHandler(client: Client){
       };
       console.log('MCP Notification:', notificationMessage);
       this.notificationsSubject.next(notificationMessage);
+    }
   });
 }
 
 initializeElicitationHandler(client: Client): void {
-  client.setRequestHandler(ElicitRequestSchema, (request: any) => {
+  client.setRequestHandler(ElicitRequestSchema, (request: ElicitRequest, extra: RequestHandlerExtra<any, any>): Promise<ElicitResult> => {
+
+    // Use the requestId from extra to uniquely identify this request
+    const currentRequestId: string | number = extra.requestId;
+    // console.log(`Handling elicit request with ID: ${currentRequestId}`);
+    // extra.sendRequest
+
     // Trigger the UI to show (assuming handleElicitRequest does this)
-    this.handleElicitRequest(request);
+    this.handleElicitRequest(request, currentRequestId);
+    // console.log("Extras : ", extra);
     
     // Return a Promise that resolves when we get a response from the UI
-    return new Promise((resolve) => {
+    return new Promise<ElicitResult>((resolve, reject) => {
+
+      // this.elicitationQueue.push({
+      //       request,
+      //       resolve,
+      //       reject
+      //   });
+
+        // Signal the elicitation loop that there's work to do
+        // if (elicitationQueueSignal) {
+        //     elicitationQueueSignal();
+        //     elicitationQueueSignal = null;
+        // }
+      // Track if we've already resolved to prevent duplicate handling
+      let isResolved = false;
+      // Set up a timeout using setTimeout (simple approach)
+      const timeoutDuration = 360000; // 6 minutes
+      const timeoutId = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          subscription.unsubscribe();
+          console.warn(`Request ${currentRequestId} timed out after ${timeoutDuration}ms`);
+          resolve({
+            action: "cancel",
+            content: { reason: "Request timeout" }
+          });
+        }
+      }, timeoutDuration);
+
       const subscription = this.elicitResponses$.subscribe({
         next: (response: any) => {
+          console.log("Response id : ", response);
+          // Check if this response belongs to the current request
+          // Assuming response now includes requestId or we've modified handleElicitRequest to include it
+          if (response?.requestId !== currentRequestId && currentRequestId !== 0) {
+            // This response is for a different request, ignore it
+            return;
+          }
+          
+          if (isResolved) {
+            console.warn(`Request ${currentRequestId} already resolved, ignoring duplicate response`);
+            return;
+          }
+          isResolved = true;
           // Clean up the subscription
           subscription.unsubscribe();
           console.log("resp : ", response)
           // Return the response in the expected format
           resolve({
+            requestId: extra.requestId,
             action: response?.action || "cancel",  // Default to cancel if no action
             content: response?.content || {}       // Empty content if none provided
           });
         },
         error: () => {
+          if (isResolved) return;
+          isResolved = true;
+          clearTimeout(timeoutId); // Clear the timeout
           subscription.unsubscribe();
           resolve({
+            requestId: extra.requestId,
             action: "decline"
           });
         }
       });
+      
+      // Optional: Handle abort signal
+      if (extra.signal) {
+        const abortHandler = () => {
+          if (!isResolved) {
+            isResolved = true;
+            clearTimeout(timeoutId);
+            subscription.unsubscribe();
+            console.log(`Request ${currentRequestId} was aborted`);
+            resolve({
+              action: "cancel",
+              content: { reason: "Request aborted" }
+            });
+          }
+        };
+        extra.signal.addEventListener('abort', abortHandler);
+      }
+
     });
   });
 }
@@ -305,11 +455,12 @@ samplingCapability(client: Client){
     }));
 }
 
-private handleElicitRequest(request: any): void {
+private handleElicitRequest(request: ElicitRequest, currentRequestId: string | number): void {
     const schema = request.params.requestedSchema;
     const fields = this.parseSchemaToFields(schema);
     
     this.elicitRequestSubject.next({
+      requestId: currentRequestId,
       message: request.params.message,
       schema: schema,
       fields: fields,
@@ -356,7 +507,7 @@ private parseSchemaToFields(schema: any): any[] {
         tool['displayName'] = getDisplayName(tool)
       }
     this.toolsSubject.next(toollist.tools)
-    console.log("Tools : ", toollist.tools);
+    // console.log("Tools : ", toollist.tools);
   }
 
 
@@ -416,21 +567,24 @@ private parseSchemaToFields(schema: any): any[] {
       params: {}
     }, ListResourcesResultSchema)
       for(const resource of resources.resources) {
-        resource['displayName'] = getDisplayName(resource)
+        console.log("Resources : ", resource);
+        resource['displayName'] = getDisplayName(resource);
       }
     this.resourceSubject.next(resources.resources)
   }
 
-  readResource(resourceLink: ResourceLink) {
+readResource(resourceLink: ResourceLink) {
     if (!this.client) {
       throw new Error('Client not connected');
     }
+    // this.client.readResource(resourceLink)
     return this.client.request({
       method: 'resources/read',
       params: {
         resourceLink
       }
     }, ReadResourceResultSchema);
+
   }
 
 // Update your disconnect method

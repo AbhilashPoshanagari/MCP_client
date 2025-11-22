@@ -105,6 +105,7 @@ export class McpClientComponent implements OnInit, OnDestroy {
   submitElicitForm(formData: any) {
     if (this.currentElicitRequest) {
       const requestId: number | string | null = this.elicitationService.getCurrentRequestId();
+      console.log("Elicitation id : ", requestId);
       this.mcpService.submitElicitResponse({
         action: 'accept',
         content: formData

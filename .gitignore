@@ -45,4 +45,3 @@ Thumbs.db
 /.vscode
 /.editorconfig
 /.env
-/api_keys.ts

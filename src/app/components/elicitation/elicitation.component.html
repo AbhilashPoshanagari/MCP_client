@@ -13,126 +13,181 @@
     </div>
 
     <div *ngIf="!showConfirmation">
-      <form [formGroup]="form" (ngSubmit)="onSubmit(form)">
-        <div *ngFor="let fieldName of getFieldNames(schema.schema)">
-          <ng-container [ngSwitch]="getFieldType(schema.schema, fieldName)">
-            <!-- Text Input -->
-            <div *ngSwitchCase="'string'" class="form-group">
-              <label [for]="fieldName">
-                {{ getFieldTitle(schema.schema, fieldName) }}
-                <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-              </label>
-              <input
-                [id]="fieldName"
-                type="text"
-                [formControlName]="fieldName"
-                class="form-control"
-                [placeholder]="getFieldDefault(schema.schema, fieldName)"
-              />
-              <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                {{ getFieldDescription(schema.schema, fieldName) }}
-              </small>
-            </div>
+      <form [formGroup]="form" (ngSubmit)="onSubmit(form)" class="form-table">
+        <div class="form-table-body">
+          <div *ngFor="let fieldName of getFieldNames(schema.schema)" class="form-row">
+            <ng-container [ngSwitch]="getFieldType(schema.schema, fieldName)">
+              
+              <!-- Text Input -->
+              <div *ngSwitchCase="'string'" class="form-field">
+                <div class="label-container">
+                  <label [for]="fieldName">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                  </label>
+                </div>
+                <div *ngIf="!getFieldOptions(schema.schema, fieldName).length" class="input-container">
+                  <input
+                    [id]="fieldName"
+                    type="text"
+                    [formControlName]="fieldName"
+                    class="form-control"
+                    [value]="getFieldDefault(schema.schema, fieldName)"
+                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
+                  />
+                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
+                    {{ getFieldDescription(schema.schema, fieldName) }}
+                  </small>
+                </div>
+                <div *ngIf="getFieldOptions(schema.schema, fieldName).length" class="input-container">
+                  <select
+                    [id]="fieldName"
+                    [formControlName]="fieldName"
+                    class="form-control"
+                  >
+                    <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
+                    <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
+                    {{ getFieldDescription(schema.schema, fieldName) }}
+                  </small>
+                </div>
+              </div>
 
-            <div *ngSwitchCase="'password'" class="form-group">
-              <label [for]="fieldName">
-                {{ getFieldTitle(schema.schema, fieldName) }}
-                <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-              </label>
-              <input
-                [id]="fieldName"
-                type="password"
-                [formControlName]="fieldName"
-                class="form-control"
-                [placeholder]="getFieldDefault(schema.schema, fieldName)"
-              />
-              <!-- <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                {{ getFieldDescription(schema.schema, fieldName) }}
-              </small> -->
-            </div>
+              <!-- Password Input -->
+              <div *ngSwitchCase="'password'" class="form-field">
+                <div class="label-container">
+                  <label [for]="fieldName">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                  </label>
+                </div>
+                <div class="input-container">
+                  <input
+                    [id]="fieldName"
+                    type="password"
+                    [formControlName]="fieldName"
+                    class="form-control"
+                    [value]="getFieldDefault(schema.schema, fieldName)"
+                  />
+                </div>
+              </div>
 
-            <!-- Number Input -->
-            <div *ngSwitchCase="'number'" class="form-group">
-              <label [for]="fieldName">
-                {{ getFieldTitle(schema.schema, fieldName) }}
-                <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-              </label>
-              <input
-                [id]="fieldName"
-                type="number"
-                [formControlName]="fieldName"
-                class="form-control"
-                [placeholder]="getFieldDefault(schema.schema, fieldName)"
-                [min]="getFieldMin(schema.schema, fieldName)"
-                [max]="getFieldMax(schema.schema, fieldName)"
-              />
-              <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                {{ getFieldDescription(schema.schema, fieldName) }}
-              </small>
-            </div>
+              <!-- Number Input -->
+              <div *ngSwitchCase="'number'" class="form-field">
+                <div class="label-container">
+                  <label [for]="fieldName">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                  </label>
+                </div>
+                <div class="input-container">
+                  <input
+                    [id]="fieldName"
+                    type="number"
+                    [formControlName]="fieldName"
+                    class="form-control"
+                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
+                    [value]="getFieldDefault(schema.schema, fieldName)"
+                    [min]="getFieldMin(schema.schema, fieldName)"
+                    [max]="getFieldMax(schema.schema, fieldName)"
+                  />
+                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
+                    {{ getFieldDescription(schema.schema, fieldName) }}
+                  </small>
+                </div>
+              </div>
 
-            <!-- Number Input -->
-            <div *ngSwitchCase="'integer'" class="form-group">
-              <label [for]="fieldName">
-                {{ getFieldTitle(schema.schema, fieldName) }}
-                <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-              </label>
-              <input
-                [id]="fieldName"
-                type="number"
-                [formControlName]="fieldName"
-                class="form-control"
-                [placeholder]="getFieldDefault(schema.schema, fieldName)"
-                [min]="getFieldMin(schema.schema, fieldName)"
-                [max]="getFieldMax(schema.schema, fieldName)"
-              />
-              <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                {{ getFieldDescription(schema.schema, fieldName) }}
-              </small>
-            </div>
+              <!-- Integer Input -->
+              <div *ngSwitchCase="'integer'" class="form-field">
+                <div class="label-container">
+                  <label [for]="fieldName">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                  </label>
+                </div>
+                <div class="input-container">
+                  <input
+                    [id]="fieldName"
+                    type="number"
+                    [formControlName]="fieldName"
+                    class="form-control"
+                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
+                    [value]="getFieldDefault(schema.schema, fieldName)"
+                    [min]="getFieldMin(schema.schema, fieldName)"
+                    [max]="getFieldMax(schema.schema, fieldName)"
+                  />
+                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
+                    {{ getFieldDescription(schema.schema, fieldName) }}
+                  </small>
+                </div>
+              </div>
 
-            <!-- Select Dropdown -->
-            <div *ngSwitchCase="'enum'" class="form-group">
-              <label [for]="fieldName">
-                {{ getFieldTitle(schema.schema, fieldName) }}
-                <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-              </label>
-              <select
-                [id]="fieldName"
-                [formControlName]="fieldName"
-                class="form-control"
-              >
-                <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
-                <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
-                  {{ option }}
-                </option>
-              </select>
-              <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                {{ getFieldDescription(schema.schema, fieldName) }}
-              </small>
-            </div>
+              <!-- Select Dropdown -->
+              <div *ngSwitchCase="'enum'" class="form-field">
+                <div class="label-container">
+                  <label [for]="fieldName">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                  </label>
+                </div>
+                <div class="input-container">
+                  <select
+                    [id]="fieldName"
+                    [formControlName]="fieldName"
+                    class="form-control"
+                  >
+                    <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
+                    <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
+                      {{ option }}
+                    </option>
+                  </select>
+                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
+                    {{ getFieldDescription(schema.schema, fieldName) }}
+                  </small>
+                </div>
+              </div>
 
-            <!-- Checkbox for Boolean -->
-            <div *ngSwitchCase="'boolean'" class="form-group form-check">
-              <input
-                type="checkbox"
-                [id]="fieldName"
-                [formControlName]="fieldName"
-                class="form-check-input"
-              />
-              <label [for]="fieldName" class="form-check-label">
-                {{ getFieldTitle(schema.schema, fieldName) }}
-              </label>
-              <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                {{ getFieldDescription(schema.schema, fieldName) }}
-              </small>
-            </div>
-          </ng-container>
+              <!-- Boolean Checkbox -->
+              <div *ngSwitchCase="'boolean'" class="form-field">
+                <div class="label-container">
+                  <label [for]="fieldName">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                  </label>
+                </div>
+                <div class="input-container">
+                  <div class="checkbox-container">
+                    <input
+                      type="checkbox"
+                      [id]="fieldName"
+                      [formControlName]="fieldName"
+                      class="form-checkbox"
+                    />
+                    <label [for]="fieldName" class="checkbox-label">
+                      {{ getFieldTitle(schema.schema, fieldName) }}
+                    </label>
+                  </div>
+                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
+                    {{ getFieldDescription(schema.schema, fieldName) }}
+                  </small>
+                </div>
+              </div>
+
+            </ng-container>
+          </div>
         </div>
 
         <div class="form-actions">
-          <button type="submit" class="btn btn-primary">Submit</button>
+          <button type="submit" [disabled]="waitingForResponse" class="btn btn-primary">Submit</button>
           <button type="button" (click)="cancel()" class="btn btn-secondary">Cancel</button>
+        </div>
+        <div *ngIf="waitingForResponse">
+          <!-- <mat-spinner></mat-spinner> -->
+          @if (waitingForResponse) {
+              <img src="gif/Spinner.gif"/>
+            }
         </div>
       </form>
     </div>
@@ -143,7 +198,8 @@
       
       <div class="confirmation-actions">
         <button (click)="confirmSubmission(true)" class="btn btn-success">Confirm</button>
-        <button (click)="confirmSubmission(false)" class="btn btn-warning">Edit</button>
+        <button (click)="onEdit()" class="btn btn-warning">Edit</button>
+        <button (click)="confirmSubmission(false)" class="btn btn-warning">Cancel</button>
       </div>
     </div>
   </div>

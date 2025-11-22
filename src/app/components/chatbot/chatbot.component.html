@@ -1,13 +1,101 @@
-<div class="chat-messages">
-    @for (message of messages; track message) {
-      <div class="message-container" [ngClass]="{'user-message': message.sender === 'user', 'bot-message': message.sender === 'bot'}">
-        <div class="message-content">
-          <div class="message-text">
-            <!-- {{message.content}} -->
-            <markdown *ngIf="message.content && typeof message.content === 'string'" [data]="message.content"></markdown>
-          </div>
-          <div class="message-time">{{message.timestamp | date:'shortTime'}}</div>
+<div #chatMessages class="chat-messages" (scroll)="onChatScroll()">
+  @for (message of messages; track message) {
+    <div class="message-container" [ngClass]="{
+            'user-message': message.role === 'user', 
+            'bot-message': message.role === 'bot',
+            'layout-message': hasMapLayout(message),
+            'map-layout-active': hasMapLayout(message)}">
+      <div class="message-content">
+        <div class="message-text">
+          <markdown *ngIf="message.content && typeof message.content === 'string'" [data]="message.content"></markdown>
         </div>
+
+        <!-- Tables with Pipes -->
+        @if (message.layouts | filterTables; as tables) {
+          <div class="table-container">
+            @for (table of tables; track table) {
+              <div class="table-wrapper">
+                @if (table.data.table_name) {
+                  <div class="table-header">Table: {{ table.data.table_name }}</div>
+                }
+                @if (table | hasValidTableStructure) {
+                  <table class="dynamic-table">
+                    <thead>
+                      <tr>
+                        @for (header of table.data.column_names; track header) {
+                          <th [title]="header">{{ header }}</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of table.data.data; track $index) {
+                        <tr>
+                          @for (cell of row; track $index) {
+                            <td [title]="cell">{{ cell }}</td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                } @else {
+                  <div class="table-error">Invalid table structure</div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Buttons with Pipes -->
+        @if (message.layouts | filterButtons; as buttons) {
+          <div class="button-container">
+            @for (button of buttons; track button) {
+              <div class="button-wrapper">
+                @if (button | hasValidButtonStructure) {
+                  <a 
+                    [href]="button | getButtonLink" 
+                    [target]="(button | isExternalLink) ? '_blank' : '_self'"
+                    class="dynamic-button"
+                    [attr.rel]="(button | isExternalLink) ? 'noopener noreferrer' : null">
+                    {{ button | getButtonTitle }}
+                  </a>
+                } @else {
+                  <div class="button-error">Invalid button structure</div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+     <!-- Maps with optimized pipes -->
+        @if (message.layouts | filterMaps; as maps) {
+          <div class="map-container">
+            @for (mapLayout of maps; track mapLayout; let mapIndex = $index) {
+              @if (mapLayout | isValidMapLayout) {
+                <div class="map-wrapper">
+                  <!-- Use hasMapTitle pipe for condition -->
+                  @if (mapLayout | hasMapTitle) {
+                    <div class="map-header">{{ mapLayout | getMapTitle }}</div>
+                  }
+                  <!-- Use individual pipes for each property -->
+                  <app-map 
+                    [featureDetails]="mapLayout | getMapFeatures"
+                    [wmsLayers]="mapLayout | getMapWmsLayers"
+                    [center]="mapLayout | getMapCenter"
+                    [zoom]="mapLayout | getMapZoom"
+                    [showPopup]="true"
+                    [height]="mapLayout | getMapHeight"
+                    (featureClick)="onFeatureClick($event)">
+                  </app-map>
+                </div>
+              } @else {
+                <div class="map-error">Invalid map layout</div>
+              }
+            }
+          </div>
+        }
+
+        <div class="message-time">{{message.timestamp | date:'shortTime'}}</div>
       </div>
-    }
+    </div>
+  }
 </div>

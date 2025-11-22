@@ -12,6 +12,17 @@
   max-width: 85%;
 }
 
+/* Special full-width container for layout messages */
+.message-container.layout-message {
+  max-width: 90% !important;
+  width: 100% !important;
+  align-self: stretch !important;
+}
+
+/* Minimum width for bot messages when map layout is active */
+.message-container.map-layout-active.bot-message {
+  min-width: 580px; /* Adjust this value as needed */
+}
 .user-message {
   align-self: flex-end;
   justify-content: flex-end;
@@ -29,6 +40,22 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 1.0rem;
   line-height: 1.5;
+}
+
+/* Special styling for layout message content */
+.layout-message .message-content {
+  width: 100% !important;
+  margin-left: 20px;
+  max-width: 90% !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+/* Ensure map layout bot messages have proper minimum width */
+.map-layout-active.bot-message .message-content {
+  min-width: 480px; /* Match the container min-width */
 }
 
 .user-message .message-content {
@@ -49,4 +76,175 @@
   color: #999;
   text-align: right;
   margin-top: 4px;
+}
+
+/* Layout containers - ensure full width */
+.table-container,
+.button-container,
+.map-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 15px 0;
+}
+
+.table-wrapper {
+  margin-bottom: 25px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: white;
+  width: 100%;
+}
+
+.table-header {
+  background-color: #f5f5f5;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.dynamic-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.dynamic-table th {
+  background-color: #f8f9fa;
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+  color: #495057;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.dynamic-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #dee2e6;
+  color: #212529;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.dynamic-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.dynamic-table tr:last-child td {
+  border-bottom: none;
+}
+
+.table-error {
+  padding: 20px;
+  text-align: center;
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  margin: 10px;
+}
+
+.button-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+}
+
+.button-wrapper {
+  flex-shrink: 0;
+}
+
+.dynamic-button {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.dynamic-button:hover {
+  background-color: #0056b3;
+}
+
+.button-error {
+  padding: 10px;
+  text-align: center;
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+/* Map specific styles */
+.map-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0;
+  padding: 0;
+}
+
+.map-container {
+  width: 100% !important;
+  /* min-height: 350px; */
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .message-container {
+    max-width: 95%;
+  }
+  
+  .message-container.layout-message {
+    max-width: 90% !important;
+  }
+
+   /* Adjust minimum width for mobile when map is active */
+  .message-container.map-layout-active.bot-message {
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+
+   .map-layout-active.bot-message .message-content {
+    min-width: 100% !important;
+  }
+  
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .dynamic-table {
+    font-size: 12px;
+  }
+  
+  .dynamic-table th,
+  .dynamic-table td {
+    padding: 8px 6px;
+    max-width: 150px;
+  }
+  
+  .map-container {
+    min-height: 300px;
+  }
+}
+
+/* For very small screens */
+@media (max-width: 480px) {
+  .message-container.map-layout-active.bot-message {
+    min-width: 100vw !important;
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
 }

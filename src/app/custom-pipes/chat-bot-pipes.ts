@@ -9,7 +9,7 @@ import { ButtonLayout, FeatureDetail, Layout, MapLayout, TableLayout, WMSLayer }
 })
 export class FilterTablesPipe implements PipeTransform {
   transform(layouts: Layout[] | undefined | null): TableLayout[] {
-    console.log('FilterTablesPipe called');
+    console.log('FilterTablesPipe called', layouts);
     return layouts ? layouts.filter((layout): layout is TableLayout => layout.type === 'table') : [];
   }
 }

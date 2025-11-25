@@ -1,7 +1,32 @@
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+.mat-mdc-menu-content {
+  background-color: #eee;
+  border-radius: 10px;
+}
 
+/* Wrap long lines inside code blocks rendered by ngx-markdown */
+.markdown-body pre {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-x: auto; /* optional, for safety */
+}
+
+.markdown-body code {
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+}
+
+pre {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+}
+
+code {
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
 /* You can add global styles to this file, and also import other style files
 
 .container {

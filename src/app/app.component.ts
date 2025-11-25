@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, inject, model, signal, ChangeDetectionStrategy, ViewChild } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, model, signal, ChangeDetectionStrategy, ViewChild, HostListener } from '@angular/core';
 // import { RouterOutlet } from '@angular/router';
 import { McpService } from './services/mcp.service';
 import { InputBoxComponent } from './components/input-box/input-box.component';
@@ -41,7 +41,9 @@ export class AppComponent {
   @ViewChild('chatComponent') chatComponent!: ChatbotComponent;
   messages: any[] = [];
   title = 'AI powered chatbot';
-  isSidebarOpen = true;
+  // isSidebarOpen = false;
+  isSidebarOpen = false;
+  isMobileScreen = false;
   chatMessages: any[] = [
     { role: 'bot', content: 'Hello! How can I assist you today?', timestamp: new Date() }
   ];
@@ -61,6 +63,10 @@ export class AppComponent {
   constructor(private mcpService: McpService, private openAIService: OpenAiService, 
     private storageService: StorageService,
     private mcpElicitationService: McpElicitationService, private cdr: ChangeDetectorRef) {
+
+    this.checkScreenSize();
+    this.initializeSidebarState();
+
     this.mcpService.mcpServerInstructions$.subscribe((res) => {
     this.system_prompt = res ? res: "You are a helpful assistant. Use tools *only* when needed. \
         If you already have the answer, reply normally instead of calling a tool again.";
@@ -110,6 +116,27 @@ export class AppComponent {
     }
   }
 
+  @HostListener('window:resize')
+  onResize() {
+    this.checkScreenSize();
+    this.initializeSidebarState();
+  }
+
+  private checkScreenSize() {
+    this.isMobileScreen = window.innerWidth <= 768; // You can adjust this breakpoint
+  }
+
+private initializeSidebarState() {
+    // Set sidebar state based on screen size
+    if (this.isMobileScreen) {
+      // Default open on mobile
+      this.isSidebarOpen = false;
+    } else {
+      // Default closed on larger screens
+      this.isSidebarOpen = true;
+    }
+  }
+
   checkToolCall(streamingContent: string){
     let final_response: {role: string,
           content: string,
@@ -122,11 +149,12 @@ export class AppComponent {
     try {
       const jsonFormat = JSON.parse(streamingContent);
       const server_keys = Object.keys(jsonFormat);
-      if(server_keys.includes("name") && server_keys.includes("arguments")){
-        if(jsonFormat.name === "table_layout_tool"){
+      if(server_keys.includes("function_call")){
+        const function_call = jsonFormat.function_call;
+        if(function_call.name === "table_layout_tool"){
             const layouts: TableLayout = {
                 type: "table",
-                data: jsonFormat.arguments
+                data: function_call.parameters
               }
             final_response = {
                 role: "bot",
@@ -198,6 +226,10 @@ toolsList(tools: OpenAITool[]){
 testTool(tool: NamedItem | null){
   if(tool){
     this.selectedTool = tool;
+    // Only open sidebar on mobile
+    if (this.isMobileScreen) {
+      this.isSidebarOpen = true;
+    }
     this.mcpElicitationService.createFormFromSchema(tool.inputSchema, "Tool test")
   }else {
     this.selectedTool = null;
@@ -205,19 +237,31 @@ testTool(tool: NamedItem | null){
   
 }
 
-tool_response(form: {response: string, layouts?: any}){
+tool_response(form: {response: string, layouts?: Array<any>}){
+  if (this.isMobileScreen) {
+    this.isSidebarOpen = false;
+  }
+  if(form.response || form.layouts){
   this.chatMessages.push({
           role: 'bot',
           content: form.response,
           layouts: form.layouts,
           timestamp: new Date()
         });
+  }else{
+
+  }
   // setTimeout(() => {
   //   this.chatComponent.scrollToBottom(); // Force scroll
   // }, 0);
 }
 
 tool_request(form: {request: string}){
+  // this.isSidebarOpen = false;
+   // Only close sidebar on mobile
+  if (this.isMobileScreen) {
+    this.isSidebarOpen = false;
+  }
   this.chatMessages.push({
         role: 'user',
         content: form.request,
@@ -229,14 +273,9 @@ async agentWorkflow(userInput: string) {
   let fullChunk: AIMessageChunk | null = null;
   // let inputMessages: Array<any> = []
   const usedTools = new Set<string>();
-  // if(this.chatMessages.length > 0){
-     this.inputMessages.push({ role: 'user', content: userInput });
-  // }else {
-    //  this.chatMessages.push({ role: 'user', content: userInput });
-    //  this.inputMessages = this.chatMessages;
-  // }
+  this.inputMessages.push({ role: 'user', content: userInput });
   this.chatMessages.push({ role: 'user', content: userInput, timestamp: new Date() });
-  console.log("Chat message : ", this.chatMessages)
+  console.log("all input message : ", this.inputMessages)
 
   try {
     let continueLoop = true;
@@ -255,9 +294,9 @@ async agentWorkflow(userInput: string) {
           const lastIndex = this.chatMessages.length - 1;
           this.chatMessages[lastIndex].content = fullChunk.content;
           this.cdr.detectChanges();
-          // setTimeout(() => {
-          //     this.chatComponent.scrollToBottom(); // Force scroll
-          //   }, 0);
+          setTimeout(() => {
+              this.chatComponent.scrollToBottom(); // Force scroll
+            }, 0);
         }
       }
 

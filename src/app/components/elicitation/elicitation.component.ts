@@ -1,6 +1,6 @@
 // elicitation.component.ts
 import { Component, OnDestroy, OnInit, Output, EventEmitter, Input, OnChanges, NgZone, SimpleChanges } from '@angular/core';
-import { FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { McpElicitationService } from '../../services/mcp/mcp-elicitation.service';
 import { Observable, Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -26,13 +26,16 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
   formAvailable: boolean = false;
   waitingForResponse: boolean = false;
   title: string = "";
-  @Output() sendToolResponse = new EventEmitter<{response: string, toolCall: boolean, layouts?: Array<any>}>();
+  @Output() sendToolResponse = new EventEmitter<{response: string, layouts?: Array<any>}>();
   @Output() sendToolRequest = new EventEmitter<{request: string}>();
 
   private subscriptions: Subscription[] = [];
+  form: FormGroup = new FormGroup({}); // Initialize with empty form group
 
   constructor(
-    private elicitationService: McpElicitationService, private mcpService: McpService, private ngZone: NgZone
+    private elicitationService: McpElicitationService, 
+    private mcpService: McpService, 
+    private ngZone: NgZone
   ) {
     this.form$ = this.elicitationService.getCurrentForm();
     this.schema$ = this.elicitationService.getCurrentSchema();
@@ -53,6 +56,15 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
         this.currentRequest = schema?.schema;
         this.title = schema?.title;
         this.formAvailable = true;
+      })
+    );
+
+    // Subscribe to form changes and set the local form property
+    this.subscriptions.push(
+      this.form$.subscribe(form => {
+        if (form) {
+          this.form = form;
+        }
       })
     );
   }
@@ -88,7 +100,8 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
           action: 'cancel'
         });
     }else{
-      console.log(this.title)
+      console.log(this.title);
+      this.sendToolResponse.emit({response : ""})
     }
     this.resetForm();
     this.formAvailable = false;
@@ -106,7 +119,6 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
     };
     }
     return data;
-
   }
 
   onSubmit(form: FormGroup): void {
@@ -157,17 +169,25 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
               if(server_keys.includes("layouts")){
 
                   const { layouts, ...contentWithoutLayouts } = extract_results;
+                  console.log("chek keys : ", Object.keys(contentWithoutLayouts).length, Object.keys(contentWithoutLayouts));
+                  if(Object.keys(contentWithoutLayouts).length){
+                    this.sendToolResponse.emit({
+                      response : "```json \n " + JSON.stringify(contentWithoutLayouts, null, 2) + "\n```",
+                      layouts: extract_results.layouts
+                    })
+                  }else {
                   this.sendToolResponse.emit({
-                    response : "```json \n " + JSON.stringify(contentWithoutLayouts, null, 2) + "\n```",
-                    layouts: extract_results.layouts,
-                    toolCall: true
+                    response : "",
+                    layouts: extract_results.layouts
                   })
+                  }
+
               }else {
-                  this.sendToolResponse.emit({toolCall: true, response : rag_response["content"][0]["text"]})
+                  this.sendToolResponse.emit({response : rag_response["content"][0]["text"]})
               }
           } catch (e) {
             // Handle plain text response
-            this.sendToolResponse.emit({toolCall: true, response : rag_response["content"][0]["text"]})
+            this.sendToolResponse.emit({response : rag_response["content"][0]["text"]})
           }
         this.resetForm();
         this.formAvailable = false;
@@ -225,50 +245,125 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   // Add these methods to the elicitation component
-getFieldNames(schema: any): string[] {
-  return schema ? Object.keys(schema.properties) : [];
-}
-
-getFieldType(schema: any, fieldName: string): string {
-  if (!schema || !schema.properties[fieldName]) return 'string';
-  const field = schema.properties[fieldName];
-  if(fieldName === 'password'){
-    return 'password';
+  getFieldNames(schema: any): string[] {
+    return schema ? Object.keys(schema.properties) : [];
   }
-  if (field.enum) return 'enum';
-  return field.type || 'string';
-}
 
-getFieldTitle(schema: any, fieldName: string): string {
-  return schema?.properties[fieldName]?.title || fieldName;
-}
+  getFieldType(schema: any, fieldName: string): string {
+    if (!schema || !schema.properties[fieldName]) return 'string';
+    const field = schema.properties[fieldName];
+    if(fieldName === 'password'){
+      return 'password';
+    }
+    if (field.enum) return 'enum';
+    return field.type || 'string';
+  }
 
-getFieldDescription(schema: any, fieldName: string): string | null {
-  return schema?.properties[fieldName]?.description || null;
-}
+  getFieldTitle(schema: any, fieldName: string): string {
+    return schema?.properties[fieldName]?.title || fieldName;
+  }
 
-getFieldDefault(schema: any, fieldName: string): any {
-  return schema?.properties[fieldName]?.default;
-}
+  getFieldDescription(schema: any, fieldName: string): string | null {
+    return schema?.properties[fieldName]?.description || null;
+  }
 
-getFieldMin(schema: any, fieldName: string): number | null {
-  return schema?.properties[fieldName]?.minimum || null;
-}
+  getFieldDefault(schema: any, fieldName: string): any {
+    return schema?.properties[fieldName]?.default;
+  }
 
-getFieldMax(schema: any, fieldName: string): number | null {
-  return schema?.properties[fieldName]?.maximum || null;
-}
+  getFieldMin(schema: any, fieldName: string): number | null {
+    return schema?.properties[fieldName]?.minimum || null;
+  }
 
-getFieldOptions(schema: any, fieldName: string): any[] {
-  return schema?.properties[fieldName]?.options || [];
-}
+  getFieldMax(schema: any, fieldName: string): number | null {
+    return schema?.properties[fieldName]?.maximum || null;
+  }
 
-getFieldExamples(schema: any, fieldName: string): any[] {
-  return schema?.properties[fieldName]?.examples || '';
-}
+  getFieldOptions(schema: any, fieldName: string): any[] {
+    return schema?.properties[fieldName]?.options || [];
+  }
 
-isFieldRequired(schema: any, fieldName: string): boolean {
-  return schema?.required?.includes(fieldName) || false;
-}
+  getFieldExamples(schema: any, fieldName: string): any[] {
+    return schema?.properties[fieldName]?.examples || '';
+  }
 
+  isFieldRequired(schema: any, fieldName: string): boolean {
+    return schema?.required?.includes(fieldName) || false;
+  }
+
+  // Array-specific methods
+  isNestedArray(schema: any, fieldName: string): boolean {
+    const field = schema?.properties[fieldName];
+    return field?.items?.type === 'array';
+  }
+
+  // getArrayItemType(schema: any, fieldName: string): string {
+  //   const field = schema?.properties[fieldName];
+  //   if (field?.items?.type === 'integer' || field?.items?.type === 'number') {
+  //     return 'number';
+  //   }
+  //   return 'string';
+  // }
+
+    getArrayItemType(schema: any, fieldName: string): string {
+    const field = schema?.properties[fieldName];
+    if (this.isNestedArray(schema, fieldName)) {
+      // For nested arrays, get the type of the nested items
+      return field?.items?.items?.type === 'integer' ? 'number' : 'text';
+    } else {
+      // For simple arrays, get the type of the items
+      return field?.items?.type === 'integer' ? 'number' : 'text';
+    }
+  }
+
+  getArrayPlaceholder(schema: any, fieldName: string): string {
+    const field = schema?.properties[fieldName];
+    return `Enter ${field?.items?.type || 'value'}`;
+  }
+
+  // Array manipulation methods using the service
+  addArrayItem(fieldName: string): void {
+    if (this.form) {
+      this.elicitationService.addArrayItemToForm(this.form, fieldName);
+    }
+  }
+
+  removeArrayItem(fieldName: string, index: number): void {
+    if (this.form) {
+      this.elicitationService.removeArrayItemFromForm(this.form, fieldName, index);
+    }
+  }
+
+  addNestedArrayItem(fieldName: string, parentIndex: number): void {
+    if (this.form) {
+      this.elicitationService.addNestedArrayItem(this.form, fieldName, parentIndex);
+    }
+  }
+
+  removeNestedArrayItem(fieldName: string, parentIndex: number, childIndex: number): void {
+    if (this.form) {
+      this.elicitationService.removeNestedArrayItem(this.form, fieldName, parentIndex, childIndex);
+    }
+  }
+
+  getFormArray(form: FormGroup, fieldName: string): FormArray {
+    return this.elicitationService.getFormArray(form, fieldName);
+  }
+
+  getNestedFormArray(form: FormGroup, fieldName: string, index: number): FormArray {
+    return this.elicitationService.getNestedFormArray(form, fieldName, index);
+  }
+
+  // Add method to add new rows to nested arrays
+  addNestedArrayRow(fieldName: string): void {
+    if (this.form) {
+      this.elicitationService.addNestedArrayRow(this.form, fieldName);
+    }
+  }
+
+  removeNestedArrayRow(fieldName: string, rowIndex: number): void {
+    if (this.form) {
+      this.elicitationService.removeNestedArrayRow(this.form, fieldName, rowIndex);
+    }
+  }
 }

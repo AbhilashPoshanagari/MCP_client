@@ -513,6 +513,7 @@ private parseSchemaToFields(schema: any): any[] {
 
   createOpenAiToolSchema(mcpTool: OriginalTool[]): OpenAITool[] {
     const openai_tools = this.toolformatterService.formatMultipleTools(mcpTool);
+    console.log("Open ai tools : ", openai_tools)
     return openai_tools;
   }
 

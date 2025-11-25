@@ -1,27 +1,6 @@
-<!-- <div class="app-container">
-  <mat-sidenav-container class="sidenav-container">
-    <mat-sidenav #sidenav mode="side" [(opened)]="isSidebarOpen" class="sidebar">
-       <app-mcp-client (tools)="toolsList($event)" (sendOpenAiKey)="InitializeLLM($event)"></app-mcp-client>
-       <app-elicitation [tool]="selectedTool" (sendToolRequest)="tool_request($event)" (sendToolResponse)="tool_response($event)"></app-elicitation>
-      <app-sidebar></app-sidebar>
-    </mat-sidenav>
-    
-    <mat-sidenav-content class="content">
-      <div class="header">
-        <button mat-icon-button (click)="toggleSidebar()" class="menu-button">
-          <mat-icon>menu</mat-icon>
-        </button>
-        <h1 class="title">{{title}}</h1>
-      </div>
-      
-
-    </mat-sidenav-content>
-  </mat-sidenav-container>
-</div> -->
-
 <div class="app-container">
   <mat-sidenav-container class="sidenav-container">
-    <mat-sidenav #sidenav mode="side" [(opened)]="isSidebarOpen" class="sidebar">
+    <mat-sidenav #sidenav [mode]="isMobileScreen ? 'over' : 'side'" [(opened)]="isSidebarOpen" class="sidebar">
        <app-mcp-client (tools)="toolsList($event)" (sendOpenAiKey)="InitializeLLM($event)"></app-mcp-client>
        <app-elicitation [tool]="selectedTool" (sendToolRequest)="tool_request($event)" (sendToolResponse)="tool_response($event)"></app-elicitation>
       <app-sidebar></app-sidebar>
@@ -36,24 +15,13 @@
       </div>
       
       <div class="chat-container">
-        <!-- Add conditional class for full-width layouts -->
         <div [class.full-width-layout]="hasLayoutMessages()" class="chat-content-wrapper">
           <app-chatbot [messages]="chatMessages" #chatComponent></app-chatbot>
         </div>
-        <app-input-box (sendMessage)="agentWorkflow($event)" (sendTool)="testTool($event)"></app-input-box>
+        <div class="input-container">
+          <app-input-box (sendMessage)="agentWorkflow($event)" (sendTool)="testTool($event)"></app-input-box>
+        </div>
       </div>
     </mat-sidenav-content>
   </mat-sidenav-container>
 </div>
-
-
-      <!-- <div class="chat-container">
-        <app-chatbot [messages]="chatMessages" #chatComponent></app-chatbot>
-        <app-input-box (sendMessage)="agentWorkflow($event)" (sendTool)="testTool($event)"></app-input-box>
-      </div> -->
-      <!-- <div class="chat-container">
-        <div class="chat-content-wrapper">
-          <app-chatbot [messages]="chatMessages" #chatComponent></app-chatbot>
-        </div>
-        <app-input-box (sendMessage)="agentWorkflow($event)" (sendTool)="testTool($event)"></app-input-box>
-      </div> -->

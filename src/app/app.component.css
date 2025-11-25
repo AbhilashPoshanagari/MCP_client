@@ -11,10 +11,11 @@
   flex: 1;
   display: flex;
   height: 100vh;
+  width: 100%;
   overflow: hidden;
 }
 
-/* Sidebar styling */
+/* Sidebar styling - Responsive width */
 .sidebar {
   width: 400px;
   background-color: #ffffff;
@@ -22,7 +23,21 @@
   flex-direction: column;
   height: 100%;
   border-right: 1px solid #e5e5e6;
-  transition: width 0.3s ease;
+  transition: transform 0.3s ease, width 0.3s ease;
+}
+
+/* Mobile sidebar styles */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100vw;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar {
+    width: 85vw;
+  }
 }
 
 /* Main content area */
@@ -31,6 +46,8 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -38,10 +55,13 @@
 .header {
   display: flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 12px 16px;
   background-color: #ffffff;
   border-bottom: 1px solid #eaeaea;
   z-index: 2;
+  min-height: 60px;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .menu-button {
@@ -50,6 +70,7 @@
   background: none;
   border: none;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .title {
@@ -57,9 +78,29 @@
   font-weight: 500;
   color: #333;
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Chat container */
+/* Mobile header adjustments */
+@media (max-width: 480px) {
+  .header {
+    padding: 8px 12px;
+    min-height: 50px;
+  }
+  
+  .title {
+    font-size: 1rem;
+  }
+  
+  .menu-button {
+    margin-right: 12px;
+    transform: scale(0.9);
+  }
+}
+
+/* Chat container - FIXED HEIGHT DISTRIBUTION */
 .chat-container {
   flex: 1;
   display: flex;
@@ -68,36 +109,116 @@
   margin: 0 auto;
   position: relative;
   overflow: hidden;
+  min-height: 0; /* Crucial for flexbox children */
 }
 
-/* Allow layout messages to break out of container */
+/* Chat content wrapper - OPTIMIZED FOR MOBILE */
 .chat-content-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* overflow-y: auto; */
-  padding: 20px;
-  padding-bottom: 100px;
+  padding: 12px;
+  padding-bottom: 70px;
   scrollbar-width: none;
   -ms-overflow-style: none;
   margin: 0 auto;
   position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  min-height: 0; /* Crucial for proper scrolling */
 }
 
 .chat-content-wrapper::-webkit-scrollbar {
   display: none;
 }
 
-/* Force full width for layout containers */
+/* Mobile padding adjustments */
+@media (max-width: 768px) {
+  .chat-content-wrapper {
+    padding: 8px;
+    padding-bottom: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chat-content-wrapper {
+    padding: 6px;
+    padding-bottom: 60px;
+  }
+}
+
+/* Input container - COMPACT MOBILE VERSION */
+.input-container {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: #f7f7f8;
+  padding: 12px 16px;
+  border-top: 1px solid #eaeaea;
+  z-index: 10;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* Mobile input adjustments - MORE COMPACT */
+@media (max-width: 768px) {
+  .input-container {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .input-container {
+    padding: 8px 10px;
+    min-height: auto;
+  }
+}
+
+/* COMPACT CHATBOT STYLES FOR MOBILE */
+@media (max-width: 480px) {
+  /* Reduce padding in chat messages */
+  ::ng-deep .message-container {
+    margin-bottom: 12px !important;
+  }
+  
+  ::ng-deep .message-bubble {
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+    line-height: 1.3 !important;
+  }
+  
+  /* Compact input box */
+  ::ng-deep app-input-box {
+    display: block;
+  }
+  
+  ::ng-deep .input-box-container {
+    min-height: auto !important;
+  }
+  
+  ::ng-deep .input-field {
+    min-height: 44px !important;
+    max-height: 44px !important;
+    font-size: 0.9rem !important;
+  }
+  
+  ::ng-deep .send-button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+    transform: scale(0.9);
+  }
+}
+
+/* Layout message adjustments for mobile */
 ::ng-deep .message-container.layout-message {
   max-width: 100% !important;
   width: 100% !important;
-  margin-left: -20px !important;
-  margin-right: -20px !important;
-  padding-left: 20px !important;
-  padding-right: 20px !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
 ::ng-deep .layout-message .message-content {
@@ -105,31 +226,7 @@
   max-width: 100% !important;
 }
 
-/* Chat area (where messages appear) */
-.chat-container > :first-child {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  padding-bottom: 100px;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
-}
-
-.chat-container > :first-child::-webkit-scrollbar {
-  display: none;
-}
-
-/* Input area (sticky at bottom) */
-.chat-container > :last-child {
-  position: sticky;
-  bottom: 0;
-  /* background-color: #ffffff; */
-  /* padding: 16px 20px;
-  border-top: 1px solid #eaeaea; */
-  /* z-index: 10; */
-}
-
-/* NEW: Special full-width container for layout messages */
+/* Full width layout for specific components */
 .full-width-layout {
   max-width: 100% !important;
   width: 100% !important;
@@ -140,11 +237,78 @@
 /* Ensure app-chatbot takes full width when needed */
 app-chatbot {
   width: 100%;
+  display: block;
+  flex: 1;
+  min-height: 0;
 }
 
-/* Input area (sticky at bottom) */
-.chat-container > :last-child {
-  position: sticky;
-  bottom: 0;
+/* Touch-friendly improvements */
+@media (max-width: 768px) {
+  .menu-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .sidebar {
+    width: 100vw !important;
+    max-width: 90% !important;
+  }
+  
+  /* Add backdrop for overlay mode */
+  .mat-drawer-backdrop.mat-drawer-shown {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
 }
 
+/* Larger screens */
+@media (min-width: 769px) {
+  .sidebar {
+    width: 400px !important;
+  }
+}
+
+/* Additional Mobile Optimizations */
+@media (max-width: 480px) {
+  /* Reduce overall spacing */
+  * {
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Optimize font sizes */
+  body {
+    font-size: 14px;
+  }
+  
+  /* Ensure proper viewport usage */
+  .chat-content-wrapper {
+    height: 1px; /* Flexbox hack */
+  }
+}
+
+/* Safe area insets for modern mobile devices */
+@supports(padding: max(0px)) {
+  .header, .input-container {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+  
+  .input-container {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Prevent horizontal scrolling and ensure proper sizing */
+* {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Critical fix for mobile height issues */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-container, .sidenav-container, .content, .chat-container {
+  height: 100%;
+}

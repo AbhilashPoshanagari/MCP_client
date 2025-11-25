@@ -78,10 +78,22 @@ export class InputBoxComponent implements OnInit, OnDestroy {
     );
   }
 
-   submitMessage() {
+  //  submitMessage() {
+  //   if (this.message.trim()) {
+  //     // Your message submission logic
+  //     console.log('Message sent:', this.message.trim());
+  //     this.sendMessage.emit(this.message.trim());
+  //     this.message = '';
+  //   }
+  // }
+
+  submitMessage(event?: Event) {
+    if (event) {
+      event.preventDefault();
+    }
+    
     if (this.message.trim()) {
-      // Your message submission logic
-      console.log('Message sent:', this.message.trim());
+      // Your existing submit logic
       this.sendMessage.emit(this.message.trim());
       this.message = '';
     }

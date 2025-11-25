@@ -364,3 +364,159 @@ input[type="checkbox"] {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
+
+/* Add to your component's CSS */
+.array-container {
+  margin-bottom: 10px;
+}
+
+.array-item {
+  margin-bottom: 8px;
+}
+
+.array-item-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.simple-array-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.array-input {
+  flex: 1;
+}
+
+.nested-array-container {
+  border-left: 2px solid #ddd;
+  padding-left: 10px;
+  margin-bottom: 8px;
+}
+
+.nested-array-item {
+  margin-bottom: 5px;
+}
+
+.nested-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.nested-array-input {
+  flex: 1;
+}
+
+.array-actions {
+  margin-top: 8px;
+}
+
+.add-btn, .remove-btn, .add-nested-btn, .remove-nested-btn {
+  min-width: 40px;
+}
+
+.remove-btn, .remove-nested-btn {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.add-btn, .add-nested-btn {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+/* Add to elicitation.component.css */
+.nested-array-section {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  background-color: #f9f9f9;
+}
+
+.nested-array-header {
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.nested-array-row {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: white;
+}
+
+.row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #eee;
+}
+
+.row-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.cell-item {
+  display: flex;
+  align-items: center;
+}
+
+.cell-input-group {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.cell-input {
+  width: 120px;
+}
+
+.row-actions {
+  margin-top: 10px;
+}
+
+.nested-array-actions {
+  margin-top: 15px;
+}
+
+.simple-array-section {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f9f9f9;
+}
+
+.simple-array-item {
+  margin-bottom: 8px;
+}
+
+.simple-array-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.array-input {
+  flex: 1;
+}
+
+.array-actions {
+  margin-top: 10px;
+}
+
+.remove-btn, .remove-cell-btn, .remove-row-btn {
+  min-width: 40px;
+}
+
+.add-btn, .add-cell-btn, .add-row-btn {
+  margin-right: 5px;
+}

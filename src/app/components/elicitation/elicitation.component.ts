@@ -1,6 +1,6 @@
 // elicitation.component.ts
 import { Component, OnDestroy, OnInit, Output, EventEmitter, Input, OnChanges, NgZone, SimpleChanges } from '@angular/core';
-import { FormArray, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { McpElicitationService } from '../../services/mcp/mcp-elicitation.service';
 import { Observable, Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -34,7 +34,7 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
 
   constructor(
     private elicitationService: McpElicitationService, 
-    private mcpService: McpService, 
+    private mcpService: McpService,  private fb: FormBuilder,
     private ngZone: NgZone
   ) {
     this.form$ = this.elicitationService.getCurrentForm();
@@ -121,32 +121,104 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
     return data;
   }
 
+  /**
+ * Convert form data arrays for object fields into plain objects.
+ * Looks at currentRequest schema to detect object fields.
+ * Example input for field 'meta': [ {key:'a', value:'1'}, {key:'b', value:'2'} ]
+ * becomes meta: { a: '1', b: '2' }
+ */
+transformObjectFields(formValue: any, schemaWrapper: any): any {
+  if (!schemaWrapper || !schemaWrapper.properties) return formValue;
+  const result = { ...formValue };
+
+  Object.keys(schemaWrapper.properties).forEach(fieldName => {
+    const prop = schemaWrapper.properties[fieldName];
+    if (!prop) return;
+
+    if (prop.type === 'object') {
+      // Expect stored as array of { key, value, valueType? }
+      const arr = result[fieldName];
+      if (!Array.isArray(arr)) return;
+
+      const obj: any = {};
+      arr.forEach((entry: any) => {
+        if (!entry || entry.key === undefined || entry.key === null) return;
+        let value = entry.value;
+        // If there is valueType selection try to coerce
+        if (entry.valueType) {
+          switch (entry.valueType) {
+            case 'number':
+              const num = Number(value);
+              value = isNaN(num) ? value : num;
+              break;
+            case 'boolean':
+              if (typeof value === 'string') {
+                const vLower = value.toLowerCase();
+                value = (vLower === 'true' || vLower === '1');
+              } else {
+                value = Boolean(value);
+              }
+              break;
+            default:
+              // keep as string
+              break;
+          }
+        }
+        obj[entry.key] = value;
+      });
+      result[fieldName] = obj;
+    }
+  });
+
+  return result;
+}
+
+
   onSubmit(form: FormGroup): void {
+    // this.markFormGroupTouched(form);
     if (form.invalid) {
       this.validationErrors = this.getFormErrors(form);
       return;
     }
+    
+    // based on currentRequest schema (if present)
+    const transformed = this.transformObjectFields(form.value, this.currentRequest);
+    console.log("Transformed : ", transformed)
 
-    const formData = form.value;
-    const isValid = this.elicitationService.validateAgainstSchema(formData, this.currentRequest);
+    // const formData = form.value;
+    const isValid = this.elicitationService.validateAgainstSchema(transformed, this.currentRequest);
 
     if (!isValid) {
       this.validationErrors = ['Data does not match the required schema.'];
       return;
     }
-    Object.keys(formData).forEach(key => {
-      if(formData[key] === null || formData[key] === undefined){
-        delete formData[key];
+
+    Object.keys(transformed).forEach(key => {
+      if(transformed[key] === null || transformed[key] === undefined || transformed[key] === ''){
+        delete transformed[key];
       }
     });
-    this.submittedData = formData;
+    
+    this.submittedData = transformed;
     if(this.title === "Tool test"){
-      this.sendToolRequest.emit({request: JSON.stringify(formData)})
-      this.toolCall(formData)
+      this.sendToolRequest.emit({request: JSON.stringify(transformed)})
+      this.toolCall(transformed)
     }else{
       this.showConfirmation = true;
     }
   }
+
+private markFormGroupTouched(formGroup: FormGroup | FormArray) {
+  Object.keys(formGroup.controls).forEach(key => {
+    const control = formGroup.get(key);
+    
+    if (control instanceof FormGroup || control instanceof FormArray) {
+      this.markFormGroupTouched(control);
+    } else {
+      control?.markAsTouched();
+    }
+  });
+}
 
   async toolCall(formData: any){
     if(this.tool?.name){
@@ -291,6 +363,22 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
     return schema?.required?.includes(fieldName) || false;
   }
 
+/**
+ * Returns possible value type options for object values if schema suggests types.
+ * Example: ['string','number','boolean'] or empty array.
+ */
+getObjectValueTypeOptions(schema: any, fieldName: string): string[] {
+  const prop = schema?.properties?.[fieldName];
+  // If schema defines additionalProperties with types, derive options
+  if (!prop) return [];
+  const additional = prop.additionalProperties;
+  if (!additional) return [];
+  const types = additional.type;
+  if (!types) return [];
+  if (Array.isArray(types)) return types;
+  return [types];
+}
+
   // Array-specific methods
   isNestedArray(schema: any, fieldName: string): boolean {
     const field = schema?.properties[fieldName];
@@ -366,4 +454,83 @@ export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {
       this.elicitationService.removeNestedArrayRow(this.form, fieldName, rowIndex);
     }
   }
+
+  // elicitation.component.ts - Fix object field methods
+
+/**
+ * Returns the FormArray for object fields (array of {key, value} groups)
+ */
+getObjectFormArray(form: FormGroup, fieldName: string): FormArray {
+  try {
+    const arr = form.get(fieldName) as FormArray;
+    if (arr && arr instanceof FormArray) {
+      return arr;
+    }
+    // If not found, create empty array and add to form
+    console.warn(`FormArray for ${fieldName} not found, creating empty one`);
+    const newArr = this.fb.array([]);
+    form.setControl(fieldName, newArr);
+    return newArr;
+  } catch (e) {
+    console.error('Error getting object form array:', e);
+    return this.fb.array([]);
+  }
+}
+
+/**
+ * Add a new key/value FormGroup to object field
+ */
+addObjectItem(fieldName: string): void {
+  if (!this.form) return;
+  const arr = this.getObjectFormArray(this.form, fieldName);
+  const fg = this.fb.group({
+    key: ['', Validators.required],
+    value: [''],
+    valueType: ['string']
+  });
+  arr.push(fg);
+}
+
+/**
+ * Remove a key/value pair from object field
+ */
+removeObjectItem(fieldName: string, index: number): void {
+  if (!this.form) return;
+  const arr = this.getObjectFormArray(this.form, fieldName);
+  if (index >= 0 && index < arr.length) {
+    arr.removeAt(index);
+  }
+}
+
+/**
+ * Validate object field items
+ */
+getObjectItemError(fieldName: string, index: number): string | null {
+  if (!this.form) return null;
+  const arr = this.getObjectFormArray(this.form, fieldName);
+  
+  if (index < 0 || index >= arr.length) return null;
+  
+  const control = arr.at(index) as FormGroup;
+  const keyControl = control.get('key');
+  
+  // Check for empty required key
+  if (keyControl?.errors?.['required'] && keyControl.touched) {
+    return 'Key is required';
+  }
+  
+  // Check for duplicate keys
+  const key = keyControl?.value;
+  if (key && key.trim()) {
+    const keys = arr.controls
+      .map((g, i) => i !== index ? (g as FormGroup).get('key')?.value : null)
+      .filter(k => k && k.trim() === key.trim());
+    
+    if (keys.length > 0) {
+      return 'Duplicate key';
+    }
+  }
+  
+  return null;
+}
 }

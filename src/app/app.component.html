@@ -12,6 +12,42 @@
           <mat-icon>menu</mat-icon>
         </button>
         <h1 class="title">{{title}}</h1>
+         <!-- Loader and Progress Bar -->
+        @if (isLoading || progressPercentage > 0 ){
+        <div class="progress-container">
+          <div class="progress-info">
+            @if (totalTools > 0){
+            <span>
+              Tool {{currentToolIndex}} of {{totalTools}} ({{progressPercentage}}%)
+            </span>
+            }
+            @if (totalTools === 0){
+            <span>
+              Processing...
+            </span>
+            }
+          </div>
+          <mat-progress-bar 
+            mode="determinate" 
+            [value]="progressPercentage"
+            class="progress-bar">
+          </mat-progress-bar>
+          @if (isLoading){
+          <div class="loader-spinner">
+            <mat-spinner diameter="20"></mat-spinner>
+          </div>
+          <button 
+            mat-icon-button 
+            color="warn" 
+            (click)="cancelOperation()"
+            class="cancel-button"
+            title="Cancel operation">
+            <mat-icon>cancel</mat-icon>
+          </button>
+          }
+        </div>
+        }
+
       </div>
       
       <div class="chat-container">
@@ -19,7 +55,7 @@
           <app-chatbot [messages]="chatMessages" #chatComponent></app-chatbot>
         </div>
         <div class="input-container">
-          <app-input-box (sendMessage)="agentWorkflow($event)" (sendTool)="testTool($event)"></app-input-box>
+          <app-input-box (sendMessage)="agentWorkflow($event)" (sendTool)="testTool($event)" ></app-input-box>
         </div>
       </div>
     </mat-sidenav-content>

@@ -174,7 +174,7 @@ export class McpService {
       this.resourceListChangingHandler(this.client);
 
       // Connect the client
-      await this.client.connect(this.transport, {timeout: 420000, maxTotalTimeout: 420000});
+      await this.client.connect(this.transport, {timeout: 420000, maxTotalTimeout: 600000});
       this.mcpServerInstructionsSubject.next(this.client.getInstructions())
       this.sessionId = this.transport.sessionId;
       if (this.sessionId) {

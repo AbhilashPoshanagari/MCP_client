@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, inject, model, signal, ChangeDetectionStrategy, ViewChild, HostListener } from '@angular/core';
+import { Component, ChangeDetectorRef, inject, model, signal, ChangeDetectionStrategy, ViewChild, HostListener, OnDestroy } from '@angular/core';
 // import { RouterOutlet } from '@angular/router';
 import { McpService } from './services/mcp.service';
 import { InputBoxComponent } from './components/input-box/input-box.component';
@@ -21,6 +21,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { StorageService } from './services/storage.service';
 import { OpenAITool } from './constants/toolschema';
 import { TableLayout } from './components/models/message.model';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 interface DialogData {
   page: string;
   server: string;
@@ -29,7 +31,8 @@ interface DialogData {
 @Component({
   selector: 'app-root',
   imports: [InputBoxComponent, ChatbotComponent, SidebarComponent, MatSidenavModule, McpClientComponent,
-    MatButtonModule, MatIconModule, MatToolbarModule, MatListModule, ElicitationComponent],
+    MatButtonModule, MatIconModule, MatToolbarModule, MatListModule, ElicitationComponent, 
+    MatProgressBarModule, MatProgressSpinnerModule],
   standalone: true,
   providers: [McpService, McpElicitationService],
   templateUrl: './app.component.html',
@@ -37,13 +40,20 @@ interface DialogData {
   changeDetection: ChangeDetectionStrategy.OnPush,
 
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   @ViewChild('chatComponent') chatComponent!: ChatbotComponent;
   messages: any[] = [];
   title = 'AI powered chatbot';
   // isSidebarOpen = false;
   isSidebarOpen = false;
   isMobileScreen = false;
+
+   // Add loader and progress bar properties
+  isLoading = false;
+  currentToolIndex = 0;
+  totalTools = 0;
+  progressPercentage = 0;
+
   chatMessages: any[] = [
     { role: 'bot', content: 'Hello! How can I assist you today?', timestamp: new Date() }
   ];
@@ -60,6 +70,12 @@ export class AppComponent {
   readonly openAiKey = model('');
   readonly dialog = inject(MatDialog);
   inputMessages: Array<{[key: string]: any}> = [];
+
+  // Add cleanup properties
+  private destroyed = false;
+  private activeSubscriptions: any[] = [];
+  private activeStream: any = null;
+
   constructor(private mcpService: McpService, private openAIService: OpenAiService, 
     private storageService: StorageService,
     private mcpElicitationService: McpElicitationService, private cdr: ChangeDetectorRef) {
@@ -71,7 +87,8 @@ export class AppComponent {
     this.system_prompt = res ? res: "You are a helpful assistant. Use tools *only* when needed. \
         If you already have the answer, reply normally instead of calling a tool again.";
     })
-    this.mcpService.streaming$.subscribe((stream: any) => {
+     const streamingSubscription = this.mcpService.streaming$.subscribe((stream: any) => {
+        if (this.destroyed) return;
         if(stream.status && stream.status === "completed"){
           // Handle completed status if needed
           this.streamingContent += stream.message;
@@ -103,6 +120,8 @@ export class AppComponent {
 
         }
       });
+
+      this.activeSubscriptions.push(streamingSubscription);
     this.human_prompt = "{input}";
     // Initialize with stored token or empty string
     const storedToken = this.storageService.getValueFromKey('open_ai_token') || '';
@@ -114,6 +133,38 @@ export class AppComponent {
       // Only initialize OpenAI if we have a token
       this.InitializeLLM(storedToken);
     }
+  }
+
+  ngOnDestroy() {
+    this.destroyed = true;
+    // Clean up all subscriptions
+    this.activeSubscriptions.forEach(sub => {
+      if (sub && typeof sub.unsubscribe === 'function') {
+        sub.unsubscribe();
+      }
+    });
+    this.activeSubscriptions = [];
+    
+    // Clean up active stream
+    if (this.activeStream && typeof this.activeStream.return === 'function') {
+      this.activeStream.return();
+    }
+  }
+
+  // Add method to update progress
+  private updateProgress(current: number, total: number) {
+    if (this.destroyed) return;
+    this.currentToolIndex = current;
+    this.totalTools = total;
+    this.progressPercentage = total > 0 ? Math.round((current / total) * 100) : 0;
+    this.cdr.detectChanges();
+  }
+
+  // Add method to show/hide loader
+  private setLoadingState(loading: boolean) {
+     if (this.destroyed) return;
+    this.isLoading = loading;
+    this.cdr.detectChanges();
   }
 
   @HostListener('window:resize')
@@ -129,10 +180,8 @@ export class AppComponent {
 private initializeSidebarState() {
     // Set sidebar state based on screen size
     if (this.isMobileScreen) {
-      // Default open on mobile
       this.isSidebarOpen = false;
     } else {
-      // Default closed on larger screens
       this.isSidebarOpen = true;
     }
   }
@@ -194,8 +243,6 @@ private initializeSidebarState() {
                 
               }
           } else {
-            // this.errorMessage = result.message;
-            // console.error('Error loading OpenAI functions:', result.message);
                 this.llm_with_tools = this.openAIService.openAImodels("langchain", 
                 this.llm_model,
                 [],
@@ -207,18 +254,12 @@ private initializeSidebarState() {
                         this.llm_with_tools.model_with_out_tools
                       ]);
           }
-        // });
   }
 
   toggleSidebar() {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-// appendMessages(messages: any){
-//   this.chatMessages.push({ role: 'bot', 
-//       content: messages,
-//       timestamp: new Date() });
-// }
 toolsList(tools: OpenAITool[]){
   this.InitializeLLM(this.openAiKey(), tools)
 }
@@ -270,9 +311,10 @@ tool_request(form: {request: string}){
 }
 
 async agentWorkflow(userInput: string) {
+   if (this.destroyed) return;
   let fullChunk: AIMessageChunk | null = null;
   // let inputMessages: Array<any> = []
-  const usedTools = new Set<string>();
+  // const usedTools = new Set<string>();
   this.inputMessages.push({ role: 'user', content: userInput });
   this.chatMessages.push({ role: 'user', content: userInput, timestamp: new Date() });
   console.log("all input message : ", this.inputMessages)
@@ -280,26 +322,52 @@ async agentWorkflow(userInput: string) {
   try {
     let continueLoop = true;
     let iteration = 0;
-
-    while (continueLoop && iteration < 8) { // safety limit
+    const usedTools = new Set<string>();
+      
+      // Count total tools that will be used in this workflow
+      // const estimatedTotalTools = 5; // You can adjust this based on your logic
+      // let currentToolCount = 0;
+      // Show loader at the start
+    this.setLoadingState(true);
+    this.updateProgress(0, 1); // Start with 0/1
+    while (continueLoop && iteration < 20 && !this.destroyed) { // safety limit
       iteration++;
-      const stream = await this.llm_runnable.stream({ input: this.inputMessages });
 
+      // Create abort controller for this stream
+        const abortController = new AbortController();
+      try {
+      const stream = await this.llm_runnable.stream({ input: this.inputMessages }, { signal: abortController.signal });
+      this.activeStream = stream;
       fullChunk = null;
       this.chatMessages.push({ role: 'bot', content: '', timestamp: new Date() });
-
       for await (const chunk of stream) {
+        if (this.destroyed) {
+              abortController.abort();
+              break;
+            }
         if (chunk instanceof AIMessageChunk) {
           fullChunk = fullChunk ? fullChunk.concat(chunk) : chunk;
           const lastIndex = this.chatMessages.length - 1;
           this.chatMessages[lastIndex].content = fullChunk.content;
           this.cdr.detectChanges();
           setTimeout(() => {
-              this.chatComponent.scrollToBottom(); // Force scroll
+              if (!this.destroyed) {
+                  this.chatComponent.scrollToBottom();
+                }
             }, 0);
         }
       }
+      } catch (streamError: any) {
+          if (streamError.name === 'AbortError') {
+            console.log('Stream aborted due to component destruction');
+            return;
+          }
+          throw streamError;
+        }finally {
+          this.activeStream = null;
+        }
 
+      if (this.destroyed) break;
       // Check for tool calls
       const toolCalls = fullChunk?.tool_calls ?? [];
 
@@ -308,9 +376,16 @@ async agentWorkflow(userInput: string) {
         continueLoop = false;
         break;
       }
-
+      
       // Process tools once per iteration
-      for (const toolCall of toolCalls) {
+      // Update total tools for progress calculation
+      this.updateProgress(0, toolCalls.length);
+
+      // for (const toolCall of toolCalls) {
+      for (let i = 0; i < toolCalls.length; i++) {
+        if (this.destroyed) break;
+
+        const toolCall = toolCalls[i];
         const toolName = toolCall.name;
         const toolArgs = toolCall.args;
 
@@ -321,10 +396,12 @@ async agentWorkflow(userInput: string) {
           break;
         }
         usedTools.add(toolName);
-
+        this.updateProgress(i+1, toolCalls.length);
+        this.setLoadingState(true);
         // Call MCP tool
+        try {
         const ragResponse = await this.mcpService.callTool(toolName, toolArgs);
-
+        this.setLoadingState(false);
         const toolOutput = Array.isArray(ragResponse?.content)
           ? ragResponse.content.map((c: { type: string; text: string }) => c.text).join('\n')
           : JSON.stringify(ragResponse);
@@ -353,14 +430,13 @@ async agentWorkflow(userInput: string) {
                     timestamp: new Date(),
                   });
                 }
-            } catch (e) {
+            } catch (parseError) {
               // Handle plain text response
               this.chatMessages.push({
                     role: 'bot',
                     content: toolOutput,
                     timestamp: new Date(),
-                  });
-              
+                  });              
             }
 
         // Add tool call + output back to LLM context
@@ -378,22 +454,66 @@ async agentWorkflow(userInput: string) {
           id: toolCall.id,
           output: toolOutput,
         });
+        } catch (toolError) {
+          console.error(`Tool ${toolName} error:`, toolError);
+          
+          this.chatMessages.push({
+            role: 'bot',
+            content: `Error executing tool ${toolName}: ${toolError}`,
+            timestamp: new Date(),
+          });
+          
+          continueLoop = false;
+          break;
+        }
 
       }
       console.log("input messages : ", this.inputMessages);
     }
-
   } catch (error) {
+     if (this.destroyed) return;
     console.error("Agent workflow error:", error);
     this.chatMessages.push({
       role: 'bot',
       content: 'Sorry, something went wrong while processing your request.',
       timestamp: new Date(),
     });
-    // setTimeout(() => {
-    //   this.chatComponent.scrollToBottom(); // Force scroll
-    // }, 0);
+  }finally {
+    // Always hide loader and reset progress when done
+    if (!this.destroyed) {
+      this.setLoadingState(false);
+      this.updateProgress(0, 0);
+    }
   }
+}
+
+// Add this method to your class
+cancelOperation() {
+  console.log('Cancelling ongoing operation...');
+  
+  // Set destroyed flag to true to stop all operations
+  this.destroyed = true;
+  
+  // Reset loading state
+  this.isLoading = false;
+  this.progressPercentage = 0;
+  this.currentToolIndex = 0;
+  this.totalTools = 0;
+  
+  // Force change detection
+  this.cdr.detectChanges();
+  
+  // Add cancellation message
+  this.chatMessages.push({
+    role: 'bot',
+    content: 'Operation cancelled by user.',
+    timestamp: new Date(),
+  });
+  
+  // Reset destroyed flag after cancellation
+  setTimeout(() => {
+    this.destroyed = false;
+  }, 100);
 }
 
 hasLayoutMessages(): boolean {

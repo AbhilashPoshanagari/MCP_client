@@ -1,599 +1,312 @@
 <!-- elicitation.component.html -->
-<!-- <div *ngIf="formAvailable">
-<div *ngIf="schema$ | async as schema; else noRequest" class="elicitation-container">
-  <div *ngIf="form$ | async as form">
-    <h2>{{title}}</h2>
-    <p *ngIf="currentRequest?.params?.message">{{ currentRequest.params.message }}</p>
-    
-    <div *ngIf="validationErrors.length" class="alert alert-danger">
-      <h4>Validation Errors</h4>
-      <ul>
-        <li *ngFor="let error of validationErrors">{{ error }}</li>
-      </ul>
-    </div>
+<div *ngIf="formAvailable">
+  <div *ngIf="schema$ | async as schema; else noRequest" class="elicitation-container">
+    <div *ngIf="form$ | async as form">
+      <h2>{{ title }}</h2>
+      <p *ngIf="currentRequest?.params?.message" class="message">{{ currentRequest.params.message }}</p>
 
-    <div *ngIf="!showConfirmation">
-      <form [formGroup]="form" (ngSubmit)="onSubmit(form)" class="form-table">
-        <div class="form-table-body">
-          <div *ngFor="let fieldName of getFieldNames(schema.schema)" class="form-row">
-            <ng-container [ngSwitch]="getFieldType(schema.schema, fieldName)">
-              
-              <div *ngSwitchCase="'string'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
+      <!-- Validation Errors -->
+      <div *ngIf="validationErrors.length" class="alert alert-danger">
+        <h4>Validation Errors</h4>
+        <ul>
+          <li *ngFor="let error of validationErrors">{{ error }}</li>
+        </ul>
+      </div>
+
+      <!-- MAIN FORM -->
+      <div *ngIf="!showConfirmation">
+        <form [formGroup]="form" (ngSubmit)="onSubmit(form)" class="form-container">
+          <div class="form-fields">
+            <div *ngFor="let fieldName of getFieldNames(schema.schema)" class="form-field-group">
+              <ng-container [ngSwitch]="getFieldType(schema.schema, fieldName)">
+                
+                <!-- STRING FIELD -->
+                <div *ngSwitchCase="'string'" class="field-wrapper">
+                  <label [for]="fieldName" class="field-label">
                     {{ getFieldTitle(schema.schema, fieldName) }}
                     <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
                   </label>
-                </div>
-                <div *ngIf="!getFieldOptions(schema.schema, fieldName).length" class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="text"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                  />
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-                <div *ngIf="getFieldOptions(schema.schema, fieldName).length" class="input-container">
-                  <select
-                    [id]="fieldName"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                  >
-                    <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
-                    <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
+                  
+                  <div class="field-input">
+                    <!-- Input Text -->
+                    <ng-container *ngIf="!getFieldOptions(schema.schema, fieldName).length">
+                      <input
+                        class="form-control"
+                        type="text"
+                        [id]="fieldName"
+                        [formControlName]="fieldName"
+                        [placeholder]="getFieldExamples(schema.schema, fieldName)"
+                      />
+                    </ng-container>
 
-              <div *ngSwitchCase="'password'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
+                    <!-- Dropdown -->
+                    <ng-container *ngIf="getFieldOptions(schema.schema, fieldName).length">
+                      <select
+                        class="form-control"
+                        [id]="fieldName"
+                        [formControlName]="fieldName"
+                      >
+                        <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
+                        <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
+                          {{ option }}
+                        </option>
+                      </select>
+                    </ng-container>
+
+                    <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="field-description">
+                      {{ getFieldDescription(schema.schema, fieldName) }}
+                    </small>
+                  </div>
+                </div>
+
+                <!-- PASSWORD FIELD -->
+                <div *ngSwitchCase="'password'" class="field-wrapper">
+                  <label [for]="fieldName" class="field-label">
                     {{ getFieldTitle(schema.schema, fieldName) }}
                     <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
                   </label>
-                </div>
-                <div class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="password"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                  />
-                </div>
-              </div>
-
-              <div *ngSwitchCase="'number'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="number"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                    [min]="getFieldMin(schema.schema, fieldName)"
-                    [max]="getFieldMax(schema.schema, fieldName)"
-                  />
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-
-              <div *ngSwitchCase="'integer'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="number"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                    [min]="getFieldMin(schema.schema, fieldName)"
-                    [max]="getFieldMax(schema.schema, fieldName)"
-                  />
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-
-              <div *ngSwitchCase="'enum'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <select
-                    [id]="fieldName"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                  >
-                    <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
-                    <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-
-              <div *ngSwitchCase="'boolean'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                  </label>
-                </div>
-                <div class="input-container">
-                  <div class="checkbox-container">
+                  <div class="field-input">
                     <input
-                      type="checkbox"
+                      type="password"
+                      class="form-control"
                       [id]="fieldName"
                       [formControlName]="fieldName"
-                      class="form-checkbox"
                     />
-                    <label [for]="fieldName" class="checkbox-label">
-                      {{ getFieldTitle(schema.schema, fieldName) }}
-                    </label>
                   </div>
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
                 </div>
-              </div>
 
-              <div *ngSwitchCase="'array'" class="form-field">
-                <div class="label-container">
-                  <label>
+                <!-- NUMBER FIELD -->
+                <div *ngSwitchCase="'number'" class="field-wrapper">
+                  <label [for]="fieldName" class="field-label">
                     {{ getFieldTitle(schema.schema, fieldName) }}
                     <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
                   </label>
+                  <div class="field-input">
+                    <input
+                      type="number"
+                      class="form-control"
+                      [id]="fieldName"
+                      [formControlName]="fieldName"
+                      [min]="getFieldMin(schema.schema, fieldName)"
+                      [max]="getFieldMax(schema.schema, fieldName)"
+                    />
+                    <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="field-description">
+                      {{ getFieldDescription(schema.schema, fieldName) }}
+                    </small>
+                  </div>
                 </div>
-                <div class="input-container">
-                  <div formArrayName="{{fieldName}}" class="array-container">
-                    <div *ngFor="let item of getFormArray(form, fieldName).controls; let i = index" class="array-item">
-                      <div [formGroupName]="i" class="array-item-content">
 
-                        <ng-container *ngIf="isNestedArray(schema.schema, fieldName)">
-                          <div formArrayName="0" class="nested-array-container">
-                            <div *ngFor="let nestedItem of getNestedFormArray(form, fieldName, i).controls; let j = index" class="nested-array-item">
-                              <div class="nested-input-group">
-                                <input
-                                  type="number"
-                                  formControlName="{{j}}"
-                                  class="form-control nested-array-input"
-                                  placeholder="Enter number"
-                                />
-                                <button 
-                                  type="button" 
-                                  (click)="removeNestedArrayItem(fieldName, i, j)" 
-                                  class="btn btn-danger btn-sm remove-nested-btn"
-                                  [disabled]="getNestedFormArray(form, fieldName, i).controls.length <= 1"
-                                >
-                                  -
-                                </button>
-                              </div>
-                            </div>
-                            <button 
-                              type="button" 
-                              (click)="addNestedArrayItem(fieldName, i)" 
-                              class="btn btn-success btn-sm add-nested-btn"
-                            >
-                              + Add Row
-                            </button>
-                          </div>
-                        </ng-container>
-                        
-                        <ng-container *ngIf="!isNestedArray(schema.schema, fieldName)">
-                          <div class="simple-array-input-group">
-                            <input
-                              type="{{getArrayItemType(schema.schema, fieldName)}}"
-                              formControlName="0"
-                              class="form-control array-input"
-                              [placeholder]="getArrayPlaceholder(schema.schema, fieldName)"
-                            />
-                            <button 
-                              type="button" 
-                              (click)="removeArrayItem(fieldName, i)" 
-                              class="btn btn-danger btn-sm remove-btn"
-                              [disabled]="getFormArray(form, fieldName).controls.length <= 1"
-                            >
-                              -
-                            </button>
-                          </div>
-                        </ng-container>
+                <!-- INTEGER FIELD -->
+                <div *ngSwitchCase="'integer'" class="field-wrapper">
+                  <label [for]="fieldName" class="field-label">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                  </label>
+                  <div class="field-input">
+                    <input
+                      type="number"
+                      class="form-control"
+                      [id]="fieldName"
+                      [formControlName]="fieldName"
+                    />
+                  </div>
+                </div>
+
+                <!-- ENUM SELECT FIELD -->
+                <div *ngSwitchCase="'enum'" class="field-wrapper">
+                  <label [for]="fieldName" class="field-label">
+                    {{ getFieldTitle(schema.schema, fieldName) }}
+                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                  </label>
+                  <div class="field-input">
+                    <select
+                      class="form-control"
+                      [id]="fieldName"
+                      [formControlName]="fieldName"
+                    >
+                      <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
+                      <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
+                        {{ option }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- BOOLEAN CHECKBOX -->
+                <div *ngSwitchCase="'boolean'" class="field-wrapper checkbox-wrapper">
+                  <div class="field-input">
+                    <label class="checkbox-label">
+                      <input
+                        type="checkbox"
+                        [id]="fieldName"
+                        [formControlName]="fieldName"
+                      />
+                      {{ getFieldTitle(schema.schema, fieldName) }}
+                      <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                    </label>
+                  </div>
+                </div>
+
+              <!-- OBJECT FIELD -->
+              <div *ngSwitchCase="'object'" class="field-wrapper">
+                <label class="field-label">
+                  {{ getFieldTitle(schema.schema, fieldName) }}
+                  <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
+                </label>
+                
+                <div class="field-input">
+                  <div [formArrayName]="fieldName" class="object-container">
+                    <div *ngFor="let kv of getObjectFormArray(form, fieldName).controls; let i = index" 
+                        [formGroupName]="i" class="object-item">
+                      
+                      <div class="object-inputs">
+                        <div class="input-group">
+                          <input
+                            class="form-control object-key"
+                            type="text"
+                            formControlName="key"
+                            placeholder="Key"
+                            [class.is-invalid]="getObjectItemError(fieldName, i)"
+                          />
                         </div>
+                        
+                        <div class="input-group">
+                          <input
+                            class="form-control object-value"
+                            type="text"
+                            formControlName="value"
+                            placeholder="Value"
+                          />
+                        </div>
+                        
+                        <div class="input-group">
+                          <select class="form-control object-value-type" formControlName="valueType">
+                            <option value="string">String</option>
+                            <option value="number">Number</option>
+                            <option value="boolean">Boolean</option>
+                          </select>
+                        </div>
+                        
+                        <div class="input-group">
+                          <button 
+                            type="button" 
+                            class="btn btn-remove" 
+                            (click)="removeObjectItem(fieldName, i)"
+                            [disabled]="getObjectFormArray(form, fieldName).controls.length <= 1 && isFieldRequired(schema.schema, fieldName)"
+                            title="Remove this key/value pair"
+                          >−</button>
+                        </div>
+                      </div>
+
+                      <div *ngIf="getObjectItemError(fieldName, i)" class="error-message">
+                        {{ getObjectItemError(fieldName, i) }}
+                      </div>
                     </div>
-                    
-                    <div *ngIf="!isNestedArray(schema.schema, fieldName)" class="array-actions">
-                      <button 
-                        type="button" 
-                        (click)="addArrayItem(fieldName)" 
-                        class="btn btn-success btn-sm add-btn"
-                      >
-                        + Add {{ getFieldTitle(schema.schema, fieldName) }}
+
+                    <div class="object-actions">
+                      <button type="button" class="btn btn-add" (click)="addObjectItem(fieldName)">
+                        + Add Key/Value Pair
                       </button>
                     </div>
                   </div>
+
+                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="field-description">
+                    {{ getFieldDescription(schema.schema, fieldName) }}
+                  </small>
+                </div>
+              </div>
+
+                <!-- ARRAY FIELDS -->
+                <div *ngSwitchCase="'array'" class="field-wrapper">
+                  <label class="field-label">{{ getFieldTitle(schema.schema, fieldName) }}</label>
                   
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-            </ng-container>
-          </div>
-        </div>
-
-        <div class="form-actions">
-          <button type="submit" [disabled]="waitingForResponse" class="btn btn-primary">Submit</button>
-          <button type="button" (click)="cancel()" class="btn btn-secondary">Cancel</button>
-        </div>
-        <div *ngIf="waitingForResponse">
-          <mat-spinner></mat-spinner>
-          @if (waitingForResponse) {
-              <img src="gif/Spinner.gif"/>
-            }
-        </div>
-      </form>
-    </div>
-
-    <div *ngIf="showConfirmation" class="confirmation-dialog">
-      <h3>Confirm Submission</h3>
-      <pre>{{ maskSensitiveData(submittedData) | json }}</pre>
-      
-      <div class="confirmation-actions">
-        <button (click)="confirmSubmission(true)" class="btn btn-success">Confirm</button>
-        <button (click)="onEdit()" class="btn btn-warning">Edit</button>
-        <button (click)="confirmSubmission(false)" class="btn btn-warning">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-</div>
-<ng-template #noRequest>
-  <div class="no-request">
-    <p>No active elicitation request</p>
-  </div>
-</ng-template> -->
-
-<!-- elicitation.component.html -->
-<div *ngIf="formAvailable">
-<div *ngIf="schema$ | async as schema; else noRequest" class="elicitation-container">
-  <div *ngIf="form$ | async as form">
-    <h2>{{title}}</h2>
-    <p *ngIf="currentRequest?.params?.message">{{ currentRequest.params.message }}</p>
-    
-    <div *ngIf="validationErrors.length" class="alert alert-danger">
-      <h4>Validation Errors</h4>
-      <ul>
-        <li *ngFor="let error of validationErrors">{{ error }}</li>
-      </ul>
-    </div>
-
-    <div *ngIf="!showConfirmation">
-      <form [formGroup]="form" (ngSubmit)="onSubmit(form)" class="form-table">
-        <div class="form-table-body">
-          <div *ngFor="let fieldName of getFieldNames(schema.schema)" class="form-row">
-            <ng-container [ngSwitch]="getFieldType(schema.schema, fieldName)">
-              <!-- Text Input -->
-              <div *ngSwitchCase="'string'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div *ngIf="!getFieldOptions(schema.schema, fieldName).length" class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="text"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                  />
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-                <div *ngIf="getFieldOptions(schema.schema, fieldName).length" class="input-container">
-                  <select
-                    [id]="fieldName"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                  >
-                    <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
-                    <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-
-              <div *ngSwitchCase="'password'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="password"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                  />
-                </div>
-              </div>
-
-              <div *ngSwitchCase="'number'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="number"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                    [min]="getFieldMin(schema.schema, fieldName)"
-                    [max]="getFieldMax(schema.schema, fieldName)"
-                  />
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-              <!-- Number fields -->
-              <div *ngSwitchCase="'integer'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <input
-                    [id]="fieldName"
-                    type="number"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                    [value]="getFieldDefault(schema.schema, fieldName)"
-                    [min]="getFieldMin(schema.schema, fieldName)"
-                    [max]="getFieldMax(schema.schema, fieldName)"
-                  />
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-
-              <div *ngSwitchCase="'enum'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <select
-                    [id]="fieldName"
-                    [formControlName]="fieldName"
-                    class="form-control"
-                  >
-                    <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
-                    <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
-                      {{ option }}
-                    </option>
-                  </select>
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-
-              <!-- Check-box -->
-              <div *ngSwitchCase="'boolean'" class="form-field">
-                <div class="label-container">
-                  <label [for]="fieldName">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                  </label>
-                </div>
-                <div class="input-container">
-                  <div class="checkbox-container">
-                    <input
-                      type="checkbox"
-                      [id]="fieldName"
-                      [formControlName]="fieldName"
-                      class="form-checkbox"
-                    />
-                    <label [for]="fieldName" class="checkbox-label">
-                      {{ getFieldTitle(schema.schema, fieldName) }}
-                    </label>
-                  </div>
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="form-text text-muted">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
-              </div>
-
-              <!-- Array Input -->
-              <div *ngSwitchCase="'array'" class="form-field">
-                <div class="label-container">
-                  <label>
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                </div>
-                <div class="input-container">
-                  <div formArrayName="{{fieldName}}" class="array-container">
-                    
-                    <!-- Simple Arrays (like column_names) -->
-                    <div *ngIf="!isNestedArray(schema.schema, fieldName)" class="simple-array-section">
-                      <div *ngFor="let item of getFormArray(form, fieldName).controls; let i = index" class="simple-array-item">
-                        <div class="simple-array-input-group">
-                          <input
-                            type="text"
-                            [formControlName]="i"
-                            class="form-control array-input"
-                            placeholder="Enter column name"
-                          />
-                          <button 
-                            type="button" 
-                            (click)="removeArrayItem(fieldName, i)" 
-                            class="btn btn-danger btn-sm remove-btn"
-                            [disabled]="getFormArray(form, fieldName).controls.length <= 1"
-                          >
-                            -
-                          </button>
-                        </div>
-                      </div>
-                      <div class="array-actions">
-                        <button 
-                          type="button" 
-                          (click)="addArrayItem(fieldName)" 
-                          class="btn btn-success btn-sm add-btn"
-                        >
-                          + Add Column
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Nested Arrays (like data) -->
-                    <div *ngIf="isNestedArray(schema.schema, fieldName)" class="nested-array-section">
-                      <div class="nested-array-header">
-                        <h5>Data Rows</h5>
-                        <small>Each row represents a data record</small>
-                      </div>
+                  <div class="field-input">
+                    <div [formArrayName]="fieldName" class="array-container">
                       
-                      <div *ngFor="let row of getFormArray(form, fieldName).controls; let rowIndex = index" class="nested-array-row">
-                        <div class="row-header">
-                          <strong>Row {{rowIndex + 1}}</strong>
-                          <button 
-                            type="button" 
-                            (click)="removeNestedArrayRow(fieldName, rowIndex)" 
-                            class="btn btn-danger btn-sm remove-row-btn"
-                            [disabled]="getFormArray(form, fieldName).controls.length <= 1"
-                          >
-                            Remove Row
-                          </button>
-                        </div>
-                        
-                        <div [formArrayName]="rowIndex" class="row-content">
-                          <div *ngFor="let cell of getNestedFormArray(form, fieldName, rowIndex).controls; let colIndex = index" class="cell-item">
-                            <div class="cell-input-group">
-                              <input
-                                type="text"
-                                [formControlName]="colIndex"
-                                class="form-control cell-input"
-                                [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                              />
-                              <button 
-                                type="button" 
-                                (click)="removeNestedArrayItem(fieldName, rowIndex, colIndex)" 
-                                class="btn btn-danger btn-sm remove-cell-btn"
-                                [disabled]="getNestedFormArray(form, fieldName, rowIndex).controls.length <= 1"
-                              >
-                                -
-                              </button>
-                            </div>
-                          </div>
-                          <div class="row-actions">
-                            <button 
-                              type="button" 
-                              (click)="addNestedArrayItem(fieldName, rowIndex)" 
-                              class="btn btn-success btn-sm add-cell-btn"
-                            >
-                              + Add Values
+                      <!-- SIMPLE ARRAY -->
+                      <div *ngIf="!isNestedArray(schema.schema, fieldName)" class="simple-array">
+                        <div *ngFor="let ctrl of getFormArray(form, fieldName).controls; let i = index" class="array-item">
+                          <div class="array-input-group">
+                            <input class="form-control" [formControlName]="i" type="text" />
+                            <button type="button" class="btn btn-remove" (click)="removeArrayItem(fieldName, i)">
+                              −
                             </button>
                           </div>
                         </div>
+                        <button type="button" class="btn btn-add" (click)="addArrayItem(fieldName)">
+                          + Add Item
+                        </button>
                       </div>
-                      
-                      <div class="nested-array-actions">
-                        <button 
-                          type="button" 
-                          (click)="addNestedArrayRow(fieldName)" 
-                          class="btn btn-primary btn-sm add-row-btn"
-                        >
-                          + Add New Row
+
+                      <!-- NESTED ARRAY -->
+                      <div *ngIf="isNestedArray(schema.schema, fieldName)" class="nested-array">
+                        <div *ngFor="let row of getFormArray(form, fieldName).controls; let r = index" 
+                            [formArrayName]="r" class="nested-row">
+                          
+                          <div class="row-header">
+                            <h5>Row {{ r + 1 }}</h5>
+                            <button type="button" class="btn btn-remove" (click)="removeNestedArrayRow(fieldName, r)">
+                              Remove Row
+                            </button>
+                          </div>
+
+                          <div class="row-cells">
+                            <div *ngFor="let col of getNestedFormArray(form, fieldName, r).controls; let c = index" class="cell-item">
+                              <div class="cell-input-group">
+                                <input class="form-control" [formControlName]="c" type="text" placeholder="Cell value" />
+                                <button type="button" class="btn btn-remove" (click)="removeNestedArrayItem(fieldName, r, c)">
+                                  −
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <button type="button" class="btn btn-add" (click)="addNestedArrayItem(fieldName, r)">
+                            + Add Cell
+                          </button>
+                        </div>
+                        
+                        <button type="button" class="btn btn-primary" (click)="addNestedArrayRow(fieldName)">
+                          + Add Row
                         </button>
                       </div>
                     </div>
-                    </div>
-                    </div>
-
                   </div>
-            </ng-container>
+                </div>
+
+              </ng-container>
+            </div>
           </div>
-        </div>
 
-        <div class="form-actions">
-          <button type="submit" [disabled]="waitingForResponse" class="btn btn-primary">Submit</button>
-          <button type="button" (click)="cancel()" class="btn btn-secondary">Cancel</button>
-        </div>
-        <div *ngIf="waitingForResponse">
-          @if (waitingForResponse) {
-            <img src="gif/Spinner.gif"/>
-          }
-        </div>
-      </form>
-    </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" [disabled]="waitingForResponse">
+              Submit
+            </button>
+            <button type="button" class="btn btn-secondary" (click)="cancel()">
+              Cancel
+            </button>
+          </div>
 
-    <div *ngIf="showConfirmation" class="confirmation-dialog">
-      <h3>Confirm Submission</h3>
-      <pre>{{ maskSensitiveData(submittedData) | json }}</pre>
-      
-      <div class="confirmation-actions">
-        <button (click)="confirmSubmission(true)" class="btn btn-success">Confirm</button>
-        <button (click)="onEdit()" class="btn btn-warning">Edit</button>
-        <button (click)="confirmSubmission(false)" class="btn btn-warning">Cancel</button>
+          <div *ngIf="waitingForResponse" class="loading-spinner">
+            <img src="gif/Spinner.gif" alt="Loading..." />
+          </div>
+        </form>
+      </div>
+
+      <!-- CONFIRMATION SCREEN -->
+      <div *ngIf="showConfirmation" class="confirmation-dialog">
+        <h3>Confirm Submission</h3>
+        <pre>{{ maskSensitiveData(submittedData) | json }}</pre>
+        <div class="confirmation-actions">
+          <button class="btn btn-success" (click)="confirmSubmission(true)">Confirm</button>
+          <button class="btn btn-warning" (click)="onEdit()">Edit</button>
+          <button class="btn btn-danger" (click)="confirmSubmission(false)">Cancel</button>
+        </div>
       </div>
     </div>
   </div>
 </div>
-</div>
+
 <ng-template #noRequest>
-  <div class="no-request">
-    <p>No active elicitation request</p>
-  </div>
+  <p class="no-request">No active elicitation request</p>
 </ng-template>

@@ -6,6 +6,47 @@
   font-family: 'Segoe UI', Roboto, sans-serif;
 }
 
+.progress-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  padding: 0 16px;
+}
+
+.progress-info {
+  font-size: 12px;
+  color: #666;
+  min-width: 120px;
+  text-align: right;
+}
+
+.progress-bar {
+  width: 150px;
+  height: 8px;
+}
+
+.loader-spinner {
+  display: flex;
+  align-items: center;
+}
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .progress-container {
+    flex-direction: column;
+    gap: 8px;
+    margin-left: 0;
+  }
+  
+  .progress-info {
+    text-align: center;
+    min-width: auto;
+  }
+  
+  .progress-bar {
+    width: 120px;
+  }
+}
 /* Sidenav container */
 .sidenav-container {
   flex: 1;
@@ -55,11 +96,11 @@
 .header {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 8px 16px;
   background-color: #ffffff;
   border-bottom: 1px solid #eaeaea;
   z-index: 2;
-  min-height: 60px;
+  min-height: 64px;
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -74,10 +115,11 @@
 }
 
 .title {
+  flex: 1;
   font-size: 1.25rem;
   font-weight: 500;
   color: #333;
-  margin: 0;
+  margin: 0 16px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

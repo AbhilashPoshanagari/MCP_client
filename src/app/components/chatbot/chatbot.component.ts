@@ -2,10 +2,9 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MarkdownModule } from 'ngx-markdown';
 import { MapComponent } from '../map/map.component';
-import { Component, ViewChild, ElementRef, Input } from '@angular/core';
+import { Component, ViewChild, ElementRef, Input, Output, EventEmitter } from '@angular/core';
 import { Message, MapLayout, FeatureDetail, WMSLayer, Layout, 
   ButtonFormat, ButtonLayout, TableLayout } from '../models/message.model';
-
   // Import all the pipes
 import { 
   // Table pipes
@@ -30,6 +29,11 @@ import {
   HasMapTitlePipe,
   IsValidMapLayoutPipe
  } from '../../custom-pipes/chat-bot-pipes';
+
+ import { FilterFormsPipe, 
+  IsValidFormLayoutPipe } from '../../custom-pipes/form-layout.pipe';
+import { ChatFormComponent } from '../chat-form/chat-form.component';
+import { ElicitationComponent } from '../elicitation/elicitation.component';
 @Component({
   selector: 'app-chatbot',
   imports: [FormsModule, CommonModule, MarkdownModule, MapComponent,
@@ -43,7 +47,14 @@ import {
     GetMapHeightPipe,
     GetMapTitlePipe,
     HasMapTitlePipe,
-    IsValidMapLayoutPipe
+    IsValidMapLayoutPipe,
+    FilterFormsPipe, 
+    IsValidFormLayoutPipe, 
+    // GetFormSchemaPipe, 
+    // GetFormTitlePipe,
+    // ElicitationComponent,
+    // FormMessageComponent,
+    ChatFormComponent
   ],
   templateUrl: './chatbot.component.html',
   styleUrl: './chatbot.component.css',
@@ -63,7 +74,7 @@ export class ChatbotComponent{
   mapCenter: [number, number] = [0, 0];
   mapZoom: number = 2;
   shouldScrollToBottom = true;
-
+  @Output() formSubmittedFromChat: EventEmitter<any> = new EventEmitter<any>()
     // New methods for layout management
   hasActiveLayout(): boolean {
     return this.activeLayoutMessageId !== null && this.activeLayoutType !== null;
@@ -378,8 +389,75 @@ export class ChatbotComponent{
     }
   }
 
-  hasMapLayout(message: any): boolean {
-    return message.layouts && this.isMapLayout(message.layouts);
+  // hasMapLayout(message: any): boolean {
+  //   return message.layouts && this.isMapLayout(message.layouts);
+  // }
+
+  // Add form layout detection
+  hasFormLayout(message: any): boolean {
+    return message.layouts && 
+          Array.isArray(message.layouts) && 
+          message.layouts.some((layout: any) => layout.type === 'form');
   }
 
+  hasMapLayout(message: any): boolean {
+    return message.layouts && 
+          Array.isArray(message.layouts) && 
+          message.layouts.some((layout: any) => layout.type === 'map');
+  }
+
+  getFormTool(formLayout: any): any {
+    console.log("form layout schema : ", formLayout)
+    return {
+      name: 'form-layout',
+      inputSchema: formLayout.data.schema,
+      // Add other required properties based on your NamedItem interface
+    };
+  }
+
+  // Handle form responses
+  // onFormResponse(event: {response: string, layouts?: Array<any>}, originalMessage: any, formIndex: number): void {
+  //   console.log('Form submitted:', event);
+    
+  //   // You can update the original message or create a new one
+  //   // For example, you might want to show the form results
+  //   if (event.response) {
+  //     // Add the form response as a new message or update the existing one
+  //     const responseMessage = {
+  //       role: 'user',
+  //       content: `Form submitted: ${event.response}`,
+  //       timestamp: new Date(),
+  //       layouts: event.layouts
+  //     };
+      
+  //     // Add to messages or handle as needed
+  //     // this.messages = [...this.messages, responseMessage];
+  //   }
+  // }
+
+  // // Handle form requests (if needed)
+  // onFormRequest(event: {request: string}): void {
+  //   console.log('Form request:', event);
+  //   // Handle any form-initiated requests
+  // }
+
+    // Update the form section in template methods
+  onChatFormSubmitted(event: {toolName: string, params: any}, message: any): void {
+    console.log('Chat form submitted:', event);
+    
+    // Notify app component that a form was submitted from chat
+    this.formSubmittedFromChat.emit({
+      toolName: event.toolName,
+      params: event.params
+    });
+  }
+
+  onChatFormCancelled(): void {
+    console.log('Chat form cancelled');
+    // Optional: Add cancellation message
+  }
+
+  // private generateId(): string {
+  //   return Date.now().toString();
+  // }
 }

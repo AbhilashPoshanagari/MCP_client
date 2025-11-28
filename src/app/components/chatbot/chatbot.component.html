@@ -9,6 +9,7 @@
         <div class="message-text markdown-body">
           <markdown *ngIf="message.content && typeof message.content === 'string'" [data]="message.content"></markdown>
         </div>
+
         <!-- Tables with Pipes -->
         @if (message.layouts | filterTables; as tables) {
           <div class="table-container">
@@ -89,6 +90,43 @@
               } @else {
                 <div class="map-error">Invalid map layout</div>
               }
+            }
+          </div>
+        }
+
+        <!-- Forms with pipes -->
+        <!-- @if ((message.layouts || []) | filterForms; as forms) {
+          <div class="form-container">
+            @for (formLayout of forms; track formLayout; let formIndex = $index) {
+              @if (formLayout | isValidFormLayout) {
+                <app-chat-form 
+                  [formLayout]="formLayout"
+                  (formSubmitted)="onChatFormSubmitted($event, message)"
+                  (formCancelled)="onChatFormCancelled()">
+                </app-chat-form>
+              } @else {
+                <div class="form-error">Invalid form layout</div>
+              }
+            }
+          </div>
+        } -->
+              <!-- Form layouts -->
+    @if (message.layouts && message.layouts.length > 0) {
+          <div class="form-layouts">
+            @for (layout of message.layouts | filterForms; track $index) {
+              <div class="form-container">
+                @if (layout | isValidFormLayout) {
+                  <app-chat-form 
+                    [formLayout]="layout"
+                    (formSubmitted)="onChatFormSubmitted($event, message)"
+                    (formCancelled)="onChatFormCancelled()">
+                  </app-chat-form>
+                } @else {
+                  <div class="invalid-form">
+                    Invalid form layout - check console for details
+                  </div>
+                }
+              </div>
             }
           </div>
         }

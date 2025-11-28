@@ -337,8 +337,8 @@ export const examples = [
 ]
 
 // Use union type for layout types
-export type LayoutType = 'table' | 'button' | 'map';
-
+export type LayoutType = 'table' | 'button' | 'map' | 'form';
+// export type Layout = TableLayout | ButtonLayout | MapLayout | FormLayout;
 export interface Layout {
   type: LayoutType;
   data: any;
@@ -378,8 +378,6 @@ export interface ButtonLayout extends Layout {
   data: ButtonFormat; // Your existing button structure
 }
 
-
-
 export interface FeatureDetail {
   id?: string;
   name?: string;
@@ -403,4 +401,133 @@ export interface WMSLayer {
   transparent?: boolean;
   attribution?: string;
   opacity?: number;
+}
+
+
+// Add to your existing models in message.model.ts
+
+// -------------------
+// ENUMS
+// -------------------
+export enum WidgetType {
+  TEXTBOX = "textBox",
+  STATUS = "status",
+  DROPDOWN = "dropdown",
+  CHECKBOX = "checkbox",
+  RADIO = "radio",
+  TEXTAREA = "textarea",
+  NUMBER = "number",
+  DATE = "date",
+  EMAIL = "email"
+}
+
+// -------------------
+// OPTION MODEL
+// -------------------
+export interface Option {
+  displayValue: string;
+  value: string;
+  dependFields?: any;
+}
+
+// -------------------
+// FORM WIDGET
+// -------------------
+export interface FormWidget {
+  _id: string;
+  id: string;
+  label: string;
+  isRequired: boolean | string;
+  placeholder: string;
+  defaultValue: string;
+  minLength?: string | number | null;
+  maxLength?: string | number | null;
+  type: WidgetType;
+  isUnderHeading: string;
+  isDependentField: boolean;
+  disabled: string;
+  displayName: string;
+  typeChange: string;
+  dynamicDropdownTable: string;
+  columnName: string;
+  formId: string;
+  position: number;
+  __v: number;
+  options?: Option[];
+  isReassign?: boolean;
+}
+
+// -------------------
+// FORM INFO / DATA
+// -------------------
+export interface FormInfo {
+  _id: string;
+  id: string;
+  name: string;
+  createdBy: string;
+  description: string;
+  dependentFields: any[];
+  displayField: any[];
+  version: string;
+}
+
+export interface FormData {
+  formWidgets: FormWidget[];
+  isCurrentVersion: boolean;
+  formInfo: FormInfo;
+  referenceList: any[];
+  recordInformation: any[];
+}
+
+export interface FormResponse {
+  data: FormData;
+  status: number;
+}
+
+// -------------------
+// FORM LAYOUT INTERFACE
+// -------------------
+// export interface FormLayout extends Layout {
+//   type: 'form';
+//   data: {
+//     title?: string;
+//     schema?: any; // JSON schema for simple forms
+//     formData?: FormData; // Full form data from your backend
+//     formSchema?: any; // Dynamic form schema generated from formData
+//   };
+// }
+
+// Update the LayoutType union
+// export type LayoutType = 'table' | 'button' | 'map' | 'form';
+
+// Update the Layout union type to include FormLayout
+
+// Update your message.model.ts
+export interface FormAction {
+  type: 'tool' | 'cancel' | 'custom';
+  title: string,
+  tool_name?: string;
+  description: string;
+  params?: { [key: string]: any };
+}
+
+export interface FormActions {
+  submit: FormAction;
+  cancel: FormAction;
+}
+
+export interface FormLayout extends Layout {
+  type: 'form';
+  data: {
+    title: string;
+    schema: any;
+    metadata?: {
+      formId: string;
+      createdBy: string;
+      version: string;
+      description: string;
+      totalFields: number;
+    };
+    actions: FormActions;
+  };
 }

@@ -1,0 +1,187 @@
+.form-message-container {
+      border: 1px solid #e1e5e9;
+      border-radius: 8px;
+      background: #f8f9fa;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+
+    .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #fff;
+      border-bottom: 1px solid #e1e5e9;
+    }
+
+    .form-title {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #495057;
+    }
+
+    .form-actions-top {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-info {
+      background: #6c757d;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .btn-info:hover {
+      background: #5a6268;
+    }
+
+    .metadata-panel {
+      background: #e9ecef;
+      padding: 12px 16px;
+      border-bottom: 1px solid #dee2e6;
+    }
+
+    .metadata-content h4 {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #495057;
+    }
+
+    .metadata-item {
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .metadata-item strong {
+      color: #343a40;
+    }
+
+    .form-content {
+      padding: 16px;
+      background: white;
+    }
+
+    .form-actions-bottom {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding: 12px 16px;
+      background: #fff;
+      border-top: 1px solid #e1e5e9;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background: #007bff;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #0056b3;
+    }
+
+    .btn-primary:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+
+    .required::after {
+  content: " *";
+  color: red;
+}
+
+.form-field {
+  margin-bottom: 1rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.error-message {
+  color: red;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.checkbox-wrapper {
+  margin-top: 0.5rem;
+}
+
+/* Readonly state styling */
+.form-control[readonly],
+.form-control[disabled] {
+  background-color: #f8f9fa;
+  border-color: #e9ecef;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+.form-control.readonly {
+  background-color: #f8f9fa;
+  border-color: #e9ecef;
+  color: #6c757d;
+}
+
+/* Submission banner */
+.submission-banner {
+  padding: 12px 16px;
+  margin: 12px 0;
+  border-radius: 4px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.submission-banner.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+/* Disabled state for entire form */
+.dynamic-form:disabled {
+  opacity: 0.7;
+}
+
+.checkbox-wrapper input[disabled] {
+  cursor: not-allowed;
+}
+
+/* Hide validation errors when form is submitted */
+.form-field:has(.form-control[readonly]) .error-message {
+  display: none;
+}

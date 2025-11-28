@@ -76,6 +76,7 @@ export class AppComponent implements OnDestroy {
   private activeSubscriptions: any[] = [];
   private activeStream: any = null;
 
+    private formSource: 'tool-test' | 'chat' | null = null;
   constructor(private mcpService: McpService, private openAIService: OpenAiService, 
     private storageService: StorageService,
     private mcpElicitationService: McpElicitationService, private cdr: ChangeDetectorRef) {
@@ -267,6 +268,7 @@ toolsList(tools: OpenAITool[]){
 testTool(tool: NamedItem | null){
   if(tool){
     this.selectedTool = tool;
+    this.formSource = 'tool-test';
     // Only open sidebar on mobile
     if (this.isMobileScreen) {
       this.isSidebarOpen = true;
@@ -274,6 +276,7 @@ testTool(tool: NamedItem | null){
     this.mcpElicitationService.createFormFromSchema(tool.inputSchema, "Tool test")
   }else {
     this.selectedTool = null;
+    this.formSource = null;
   }
   
 }
@@ -289,6 +292,14 @@ tool_response(form: {response: string, layouts?: Array<any>}){
           layouts: form.layouts,
           timestamp: new Date()
         });
+      // Check if response contains form layouts
+    // if (form.layouts?.some(layout => layout.type === 'form')) {
+    //   // If form came from tool test, hide the main elicitation
+    //   if (this.formSource === 'tool-test') {
+    //     this.selectedTool = null; // This will hide the main elicitation component
+    //     this.formSource = 'chat'; // Now the form is in chat
+    //   }
+    // }
   }else{
 
   }
@@ -309,6 +320,30 @@ tool_request(form: {request: string}){
         timestamp: new Date()
       });
 }
+
+ async onChatFormSubmitted(event: {toolName: string, params: any}) {
+    // Call the tool with form data
+    console.log("tool call : ", event.toolName, event.params);
+    const formResponse = await this.mcpService.callTool(event.toolName, event.params);
+    const toolOutput = Array.isArray(formResponse?.content)
+          ? formResponse.content.map((c: { type: string; text: string }) => c.text).join('\n')
+          : JSON.stringify(formResponse);
+    console.log("form response : ", toolOutput)
+    // Reset form source after submission
+      this.chatMessages.push({
+          role: 'bot',
+          content: toolOutput,
+          timestamp: new Date()
+        });
+    this.cdr.detectChanges();
+  this.formSource = null;
+
+  }
+
+  // Update the template to show/hide based on precise conditions
+  shouldShowMainElicitation(): boolean {
+    return this.selectedTool !== null && this.formSource !== 'chat';
+  }
 
 async agentWorkflow(userInput: string) {
    if (this.destroyed) return;

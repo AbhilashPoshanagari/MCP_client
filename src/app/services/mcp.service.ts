@@ -3,6 +3,7 @@ import { Observable, from, Subject, BehaviorSubject, shareReplay, timeout } from
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { getDisplayName } from '@modelcontextprotocol/sdk/shared/metadataUtils.js';
+import { JsonOutputParser, StringOutputParser } from "@langchain/core/output_parsers";
 import {
   ListToolsRequest,
   ListToolsResultSchema,
@@ -27,12 +28,21 @@ import {
   CreateMessageRequestSchema,
   ProgressNotificationSchema,
   ElicitRequest,
-  ElicitResult
+  ElicitResult,
+  McpError,
+  ErrorCode,
+  SamplingMessage,
+  SamplingMessageContentBlock,
+  CreateMessageRequest,
+  CreateMessageResult
 } from '@modelcontextprotocol/sdk/types.js';
 import { ToolformatterService } from './toolformatter.service';
 import { OriginalTool, OpenAITool } from '../constants/toolschema';
 import { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
-
+import { OpenAiService } from './open-ai.service';
+import { StorageService } from './storage.service';
+import { AIMessagePromptTemplate, BaseMessagePromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate } from '@langchain/core/prompts';
+import { RunnableSequence } from '@langchain/core/runnables';
 export interface ElicitPrompt {
   requestId: number | string;
   message: string;
@@ -98,7 +108,8 @@ export class McpService {
   public elicitResponses$ = this.elicitResponseSubject.asObservable();
   public notificationsToolLastEventId: string | undefined = undefined;
 
-  constructor( private toolformatterService: ToolformatterService) {}
+  constructor( private toolformatterService: ToolformatterService, 
+    private openai_service: OpenAiService, private storageService: StorageService) {}
 
   async connect(url: string): Promise<void> {
     let serverUrl = url;
@@ -118,8 +129,7 @@ export class McpService {
           elicitation: {
             form: {}
           },
-          sampling: {},
-          completions: {}
+          sampling: {}    
         },
       });
 
@@ -168,7 +178,7 @@ export class McpService {
       };
 
       this.initializeElicitationHandler(this.client);
-      this.samplingCapability(this.client);
+      this.samplingRequestHandler(this.client);
       this.progressNotificationHandler(this.client);
       this.loggingNotificationHandler(this.client);
       this.resourceListChangingHandler(this.client);
@@ -334,30 +344,27 @@ progressNotificationHandler(client: Client){
 
 initializeElicitationHandler(client: Client): void {
   client.setRequestHandler(ElicitRequestSchema, (request: ElicitRequest, extra: RequestHandlerExtra<any, any>): Promise<ElicitResult> => {
-
+    if (request.params.mode && request.params.mode !== 'form') {
+            throw new McpError(ErrorCode.InvalidParams, `Unsupported elicitation mode: ${request.params.mode}`);
+        }
     // Use the requestId from extra to uniquely identify this request
     const currentRequestId: string | number = extra.requestId;
     // console.log(`Handling elicit request with ID: ${currentRequestId}`);
-    // extra.sendRequest
 
     // Trigger the UI to show (assuming handleElicitRequest does this)
-    this.handleElicitRequest(request, currentRequestId);
+    const schema = request.params.requestedSchema;
+    const fields = this.parseSchemaToFields(schema);
+    
+    this.elicitRequestSubject.next({
+      requestId: currentRequestId,
+      message: request.params.message,
+      schema: schema,
+      fields: fields,
+    });
     // console.log("Extras : ", extra);
     
     // Return a Promise that resolves when we get a response from the UI
     return new Promise<ElicitResult>((resolve, reject) => {
-
-      // this.elicitationQueue.push({
-      //       request,
-      //       resolve,
-      //       reject
-      //   });
-
-        // Signal the elicitation loop that there's work to do
-        // if (elicitationQueueSignal) {
-        //     elicitationQueueSignal();
-        //     elicitationQueueSignal = null;
-        // }
       // Track if we've already resolved to prevent duplicate handling
       let isResolved = false;
       // Set up a timeout using setTimeout (simple approach)
@@ -375,15 +382,8 @@ initializeElicitationHandler(client: Client): void {
       }, timeoutDuration);
 
       const subscription = this.elicitResponses$.subscribe({
-        next: (response: any) => {
-          console.log("Response id : ", response);
+        next: (response: ElicitResult) => {
           // Check if this response belongs to the current request
-          // Assuming response now includes requestId or we've modified handleElicitRequest to include it
-          if (response?.requestId !== currentRequestId && currentRequestId !== 0) {
-            // This response is for a different request, ignore it
-            return;
-          }
-          
           if (isResolved) {
             console.warn(`Request ${currentRequestId} already resolved, ignoring duplicate response`);
             return;
@@ -394,7 +394,7 @@ initializeElicitationHandler(client: Client): void {
           console.log("resp : ", response)
           // Return the response in the expected format
           resolve({
-            requestId: extra.requestId,
+            _meta: { requestId: extra.requestId},
             action: response?.action || "cancel",  // Default to cancel if no action
             content: response?.content || {}       // Empty content if none provided
           });
@@ -405,7 +405,7 @@ initializeElicitationHandler(client: Client): void {
           clearTimeout(timeoutId); // Clear the timeout
           subscription.unsubscribe();
           resolve({
-            requestId: extra.requestId,
+            _meta: {requestId: extra.requestId},
             action: "decline"
           });
         }
@@ -429,8 +429,11 @@ initializeElicitationHandler(client: Client): void {
       }
 
     });
+
   });
 }
+
+
 
 // Add this method to handle reconnection with existing session
 async reconnect(): Promise<void> {
@@ -444,28 +447,99 @@ async reconnect(): Promise<void> {
   }
 }
 
-samplingCapability(client: Client){
-  client.setRequestHandler(CreateMessageRequestSchema, () => ({
-      model: "test-model",
-      role: "assistant",
-      content: {
-        type: "text",
-        text: "Test response",
-      },
-    }));
+samplingRequestHandler(client: Client): void{
+  client.setRequestHandler(CreateMessageRequestSchema, ( request: CreateMessageRequest ): Promise<CreateMessageResult> => {
+    // Arrays to collect all messages
+    const messageTemplates: BaseMessagePromptTemplate[] = [];
+    
+    console.log(request.params);
+    let userInput = "";
+    // Add system prompt if available
+    if (request.params.systemPrompt) {
+      const systemPrompt = typeof request.params.systemPrompt === 'string' 
+        ? request.params.systemPrompt 
+        : JSON.stringify(request.params.systemPrompt);
+      messageTemplates.push(SystemMessagePromptTemplate.fromTemplate(systemPrompt));
+    }
+    
+    // Process all messages in order
+    if (request.params.messages && request.params.messages.length > 0) {
+      for (let i = 0; i < request.params.messages.length; i++) {
+        const message = request.params.messages[i];
+        const role = message.role;
+        const content = message.content;
+        
+        let textContent = '';
+        
+        // Extract text content from different content formats
+        if (typeof content === 'object' && !Array.isArray(content) && content.type === 'text' && 'text' in content) {
+          textContent = content.text;
+        } else if (Array.isArray(content)) {
+          const textPart = content.find(c => c.type === 'text' && 'text' in c);
+          if (textPart && 'text' in textPart) {
+            textContent = textPart.text;
+          }
+        } else if (typeof content === 'string') {
+          textContent = content;
+        }
+        
+        // Create appropriate message template based on role
+        if (textContent) {
+          if (role === 'assistant') {
+            userInput = textContent;
+            messageTemplates.push(AIMessagePromptTemplate.fromTemplate(textContent));
+          } else if (role === 'user') {
+            messageTemplates.push(HumanMessagePromptTemplate.fromTemplate(textContent));
+          } else if (role === 'system') {
+            messageTemplates.push(SystemMessagePromptTemplate.fromTemplate(textContent));
+          }
+        }
+      }
+    }
+    
+    console.log(`\n[Sampling] Collected ${messageTemplates.length} messages`);
+
+      return new Promise(async (resolve, reject) => {
+        let options = {
+          userInput: userInput, 
+          messages: messageTemplates,
+          model_preference: request.params.modelPreferences?.hints?.[0]?.name
+        }
+        const response = await this.openAISampling(options)
+        console.log("Sampleing front-end response : ", response)
+        resolve({
+              model: 'gpt-4o-mini',
+              role: 'assistant',
+              content: { type: 'text', 
+                text: typeof response === 'string' ? response : JSON.stringify(response)
+               }
+          })
+    })
+  });
 }
 
-private handleElicitRequest(request: ElicitRequest, currentRequestId: string | number): void {
-    const schema = request.params.requestedSchema;
-    const fields = this.parseSchemaToFields(schema);
-    
-    this.elicitRequestSubject.next({
-      requestId: currentRequestId,
-      message: request.params.message,
-      schema: schema,
-      fields: fields,
+
+async openAISampling(options: { userInput: string, messages: BaseMessagePromptTemplate[], model_preference?: string }) {
+  try {
+    const storedToken = this.storageService.getValueFromKey('open_ai_token') || '';
+    let open_ai_model = this.openai_service.getOpenAiClient({
+      openAIKey: storedToken, 
+      model: options.model_preference || "gpt-4o-mini"
     });
+
+    // Create the prompt template from the collected messages
+    const prompt = ChatPromptTemplate.fromMessages(options.messages);
+    console.log("prompt : ", prompt);
+    const llm_runnable = RunnableSequence.from([prompt, open_ai_model, new StringOutputParser()]);
+    
+    const llm_response = await llm_runnable.invoke({input: options.userInput});
+    return llm_response;
+  } catch (error) {
+    console.error("Agent workflow error:", error);
+    return error;
   }
+}
+
 
 private parseSchemaToFields(schema: any): any[] {
     const properties = schema.properties;
@@ -504,7 +578,7 @@ private parseSchemaToFields(schema: any): any[] {
       params: {}
     }, ListToolsResultSchema);
       for (const tool of toollist.tools) {
-        tool['displayName'] = getDisplayName(tool)
+        tool['title'] = getDisplayName(tool)
       }
     this.toolsSubject.next(toollist.tools)
     // console.log("Tools : ", toollist.tools);
@@ -526,7 +600,7 @@ private parseSchemaToFields(schema: any): any[] {
       params: {}
     }, ListPromptsResultSchema);
     for (const prompt of prompts.prompts) {
-        prompt['displayName'] = getDisplayName(prompt)
+        prompt['title'] = getDisplayName(prompt)
       }
       console.log("Prompt : ", prompts.prompts)
     this.promptsSubject.next(prompts.prompts)
@@ -569,7 +643,7 @@ private parseSchemaToFields(schema: any): any[] {
     }, ListResourcesResultSchema)
       for(const resource of resources.resources) {
         console.log("Resources : ", resource);
-        resource['displayName'] = getDisplayName(resource);
+        resource['title'] = getDisplayName(resource);
       }
     this.resourceSubject.next(resources.resources)
   }
@@ -663,145 +737,6 @@ async longRunningTool(toolId: string, parameters: any){
         }
       );
 }
-
-  callToolWithStream(toolId: string, parameters: any): Observable<{ content: string, progress?: number }> {
-    const progressToken = this.generateProgressToken(); // Generate a unique token
-    const outputSubject = new Subject<{ content: string, progress?: number }>();
-    let accumulatedOutput = '';
-
-    if (!this.client) {
-      throw new Error('Client not connected');
-    }
-    // Initial call
-    this.client.request({
-            method: 'tools/call',
-            params: {
-              name: toolId,
-              arguments: parameters,
-              _meta: {
-                progressToken: progressToken,
-                stream: true
-              }
-            }
-          }, CallToolResultSchema).then(initialResponse => {
-             // Check if response is already complete
-              if (this.isComplete(initialResponse)) {
-                accumulatedOutput += this.extractContent(initialResponse);
-                outputSubject.next({
-                  content: accumulatedOutput,
-                  progress: 100
-                });
-                outputSubject.complete();
-              } else {
-                // If server supports streaming, it might keep the connection open
-                // Otherwise we'll need to modify this based on actual API behavior
-                this.handleStreamingResponse(initialResponse, outputSubject, accumulatedOutput);
-              }
-            // this.handleToolResponse(initialResponse, outputSubject, accumulatedOutput);
-          }).catch(err => {
-            outputSubject.error(err);
-          });
-
-    return outputSubject.asObservable();
-  }
-
-  private handleStreamingResponse(
-    response: any,
-    subject: Subject<{ content: string, progress?: number }>,
-    accumulatedOutput: string
-  ) {
-    // Implementation depends on your server's actual streaming mechanism:
-    
-    // Option 1: If server keeps connection open and streams chunks
-    if (response.stream) {
-      response.stream.on('data', (chunk: any) => {
-        accumulatedOutput += this.extractContent(chunk);
-        subject.next({
-          content: accumulatedOutput,
-          progress: this.extractProgress(chunk)
-        });
-      });
-      
-      response.stream.on('end', () => {
-        subject.complete();
-      });
-      
-      response.stream.on('error', (err: any) => {
-        subject.error(err);
-      });
-    }
-    // Option 2: If server returns immediately but provides a way to fetch updates
-    else if (response._meta?.streamId) {
-      console.log(response._meta?.streamId)
-      // this.pollForUpdates(response._meta.streamId, subject, accumulatedOutput);
-    }
-    // Option 3: Default behavior - single response
-    else {
-      accumulatedOutput += this.extractContent(response);
-      subject.next({
-        content: accumulatedOutput,
-        progress: 100
-      });
-      subject.complete();
-    }
-  }
-
-  private handleToolResponse(
-    response: any,
-    subject: Subject<{ content: string, progress?: number }>,
-    accumulatedOutput: string
-  ) {
-    // Process the current chunk
-    const newContent = this.extractContent(response);
-    accumulatedOutput += newContent;
-    console.log("streaming output : ", accumulatedOutput)
-    
-    subject.next({
-      content: accumulatedOutput,
-      progress: this.extractProgress(response)
-    });
-
-    // Check if we should continue polling
-    if (!this.isComplete(response)) {
-      
-      // Poll for updates using the progress token
-      setTimeout(() => {
-         if (!this.client) {
-            throw new Error('Client not connected');
-          }
-        this.client.request({
-          method: 'tools/call',
-          params: {
-            name: 'get_progress', // Or whatever your progress endpoint is
-            arguments: {
-              progressToken: response._meta?.progressToken
-            }
-          }
-        }, CallToolResultSchema).then(nextResponse => {
-          this.handleToolResponse(nextResponse, subject, accumulatedOutput);
-        }).catch(err => {
-          subject.error(err);
-        });
-      }, 500); // Adjust polling interval as needed
-    } else {
-      subject.complete();
-    }
-  }
-
-  private extractContent(response: any): string {
-    // Implement logic to extract content from response
-    return response.structuredContent?.result || response.output || '';
-  }
-
-  private extractProgress(response: any): number | undefined {
-    // Implement logic to extract progress from response
-    return response._meta?.progress || response.progress;
-  }
-
-  private isComplete(response: any): boolean {
-    // Implement logic to check if response is complete
-    return response._meta?.complete || response.status === 'completed';
-  }
 
   private generateProgressToken(): string {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);

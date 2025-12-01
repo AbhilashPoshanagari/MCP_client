@@ -61,6 +61,9 @@ export class ChatFormComponent {
         if (field.required) {
           validators.push(Validators.required);
         }
+        if(fieldConfig.widgetType == 'email'){
+          validators.push(Validators.email);
+        }
 
         // Handle different field types for default values
         let defaultValue: string | boolean | number | null = '';
@@ -92,6 +95,10 @@ export class ChatFormComponent {
           return 'string';
         case 'select':
           return 'select';
+        case 'dropdown':
+          return 'select';
+        case 'checkbox':
+          return 'boolean';
         case 'number':
           return 'number';
         default:

@@ -32,7 +32,7 @@
           @for (tool of tools; track tool.name) {
             <button mat-menu-item (click)="selectTool(tool)">
               <mat-icon class="menu-icon">build</mat-icon>
-              <span>{{ tool.displayName }}</span>
+              <span>{{ tool.title }}</span>
             </button>
           }
         </mat-menu>
@@ -49,7 +49,7 @@
         @for (resource of resources; track resource.name) {
           <button mat-menu-item (click)="selectResource(resource)">
             <mat-icon class="menu-icon">collections_bookmark</mat-icon>
-            <span>{{ resource.displayName }}</span>
+            <span>{{ resource.title }}</span>
           </button>
         }
       </mat-menu>
@@ -66,7 +66,7 @@
         @for (prompt of prompts; track prompt.name) {
           <button mat-menu-item (click)="selectPrompt(prompt)">
             <mat-icon class="menu-icon">lightbulb</mat-icon>
-            <span>{{ prompt.displayName }}</span>
+            <span>{{ prompt.title }}</span>
           </button>
         }
       </mat-menu>
@@ -79,21 +79,21 @@
       @if (selectedTool) {
         <span class="selected-item" (click)="clearSelection('tool', selectedTool)">
           <mat-icon class="icon-xsmall">build</mat-icon>
-          <span class="selected-text">{{ selectedTool.displayName }}</span>
+          <span class="selected-text">{{ selectedTool.title }}</span>
           <span class="chip-close">×</span>
         </span>
       }
       @if (selectedResource) {
         <span class="selected-item" (click)="clearSelection('resource', selectedResource)">
           <mat-icon class="icon-xsmall">collections_bookmark</mat-icon>
-          <span class="selected-text">{{ selectedResource.displayName }}</span>
+          <span class="selected-text">{{ selectedResource.title }}</span>
           <span class="chip-close">×</span>
         </span>
       }
       @if (selectedPrompt) {
         <span class="selected-item" (click)="clearSelection('prompt', selectedPrompt)">
           <mat-icon class="icon-xsmall">lightbulb</mat-icon>
-          <span class="selected-text">{{ selectedPrompt.displayName }}</span>
+          <span class="selected-text">{{ selectedPrompt.title }}</span>
           <span class="chip-close">×</span>
         </span>
       }

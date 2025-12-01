@@ -5,6 +5,7 @@ export interface NamedItem {
     uri?: string; // Optional for resources
     parameters?: any; // Optional for tools
     inputSchema: any;
+    title: string;
 }
 
 export interface OpenAIFunctions {
@@ -19,3 +20,12 @@ export interface OpenAIFunctions {
     }
   }
 }
+
+export interface OpenAiConfig {
+  openAIKey: string;
+  model?: string;
+  temparature?: number;
+  maxToken?: number;
+  streaming?: boolean;
+}
+

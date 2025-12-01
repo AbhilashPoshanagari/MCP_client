@@ -11,7 +11,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
 import { OpenAiService } from './services/open-ai.service';
 import { McpClientComponent } from './mcp-client/mcp-client.component';
-import { NamedItem, OpenAIFunctions } from './common';
+import { NamedItem, OpenAiConfig, OpenAIFunctions } from './common';
 import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { ElicitationComponent } from './components/elicitation/elicitation.component';
@@ -226,7 +226,10 @@ private initializeSidebarState() {
   }
 
   InitializeLLM(token: string, tools: OpenAITool[] = []){
-        this.llm_model = this.openAIService.getOpenAiClient(token)  
+      let options: OpenAiConfig = {
+        openAIKey: token
+      }
+        this.llm_model = this.openAIService.getOpenAiClient(options)  
         if (tools.length > 0){
             try {
                 this.llm_with_tools = this.openAIService.openAImodels("langchain", 

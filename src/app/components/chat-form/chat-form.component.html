@@ -96,6 +96,7 @@
             <!-- Validation Errors -->
             <div *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched && !isSubmitted" class="error-message">
               <div *ngIf="form.get(field.key)?.errors?.['required']">This field is required</div>
+              <div *ngIf="form.get(field.key)?.errors?.['email']">Invalid email format</div>
             </div>
           </div>
 

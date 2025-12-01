@@ -15,6 +15,7 @@ import { map, catchError } from 'rxjs/operators';
 // import { createToolCallingAgent } from "langchain/agents";
 // import "dotenv/config";
 import { environment } from '../../environments/environment';
+import { OpenAiConfig } from '../common';
 @Injectable({
   providedIn: 'root'
 })
@@ -22,30 +23,29 @@ export class OpenAiService {
   langchain_model: any = null;
   openAI_agent: any;
 
-  constructor(private restApiService: RestApiService) {
+  constructor() {
   }
 
-//  getOpenAIFunctions(openAIKey: string): Observable<any> {
-//   if (!openAIKey) {
-//     console.error('OpenAI API key is not set.');
-//     return of({ status: 401, message: "OpenAI key not valid or not available" });
-//   } else {
-//     return this.restApiService.getRequest(this.openAi_format).pipe(
-//       map((funcs: any) => {
-//         if (funcs.status === 200) {
-//           console.log("OpenAI Functions: ", funcs.open_ai);
-//           return { status: funcs.status, open_ai: funcs.open_ai };
-//         } else {
-//           return { status: funcs.status, message: funcs.error };
-//         }
-//       }),
-//       catchError(() => of({ status: 500, message: "Something went wrong" }))
-//     );
-//   }
-// }
+  // getOpenAiClient(openAIKey: string) {
+  //   if (!openAIKey) {
+  //     throw new Error('OpenAI API key is not set');
+  //   }
+  //   if (this.langchain_model) {
+  //     delete this.langchain_model;
+  //   }
+    
+  //  this.langchain_model = new ChatOpenAI({
+  //                       apiKey: openAIKey,
+  //                       model: 'gpt-4o-mini',
+  //                       temperature: 0,
+  //                       maxTokens: 4096,
+  //                       streaming: true
+  //                       });                   
+  //   return this.langchain_model
+  // }
 
-  getOpenAiClient(openAIKey: string) {
-    if (!openAIKey) {
+    getOpenAiClient(open_ai_config: OpenAiConfig) {
+    if (!open_ai_config.openAIKey) {
       throw new Error('OpenAI API key is not set');
     }
     if (this.langchain_model) {
@@ -53,11 +53,11 @@ export class OpenAiService {
     }
     
    this.langchain_model = new ChatOpenAI({
-                        apiKey: openAIKey,
-                        model: 'gpt-4o-mini',
-                        temperature: 0,
-                        maxTokens: 4096,
-                        streaming: true
+                        apiKey: open_ai_config.openAIKey,
+                        model: open_ai_config.model || 'gpt-4o-mini',
+                        temperature: open_ai_config.temparature || 0,
+                        maxTokens: open_ai_config.maxToken || 4096,
+                        streaming: open_ai_config.streaming || true
                         });                   
     return this.langchain_model
   }

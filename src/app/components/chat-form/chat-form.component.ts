@@ -13,6 +13,8 @@ export class ChatFormComponent {
   @Input() formLayout!: FormLayout;
   @Output() formSubmitted = new EventEmitter<{toolName: string, params: any}>();
   @Output() formCancelled = new EventEmitter<void>();
+  @Output() kanbanAction = new EventEmitter<any>();
+  @Output() kanbanBoardUpdated = new EventEmitter<any>();
 
   formFields: any[] = [];
   showMetadata = false;
@@ -296,6 +298,14 @@ export class ChatFormComponent {
       const control = this.form.get(key);
       control?.enable();
     });
+  }
+
+  onKanbanAction(event: any) {
+    this.kanbanAction.emit(event);
+  }
+  
+  onKanbanBoardUpdated(event: any) {
+    this.kanbanBoardUpdated.emit(event);
   }
 
 }

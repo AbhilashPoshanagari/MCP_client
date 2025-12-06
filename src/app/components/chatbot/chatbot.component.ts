@@ -33,7 +33,9 @@ import {
  import { FilterFormsPipe, 
   IsValidFormLayoutPipe } from '../../custom-pipes/form-layout.pipe';
 import { ChatFormComponent } from '../chat-form/chat-form.component';
-import { ElicitationComponent } from '../elicitation/elicitation.component';
+import { KanbanBoardComponent } from '../kanban-board/kanban-board.component';
+import { ChatKanbanComponent } from '../chat-kanban/chat-kanban.component';
+import { FilterKanbanPipe, IsKanbanLayoutPipe } from '../../custom-pipes/kanban-board.pipe';
 @Component({
   selector: 'app-chatbot',
   imports: [FormsModule, CommonModule, MarkdownModule, MapComponent,
@@ -49,12 +51,11 @@ import { ElicitationComponent } from '../elicitation/elicitation.component';
     HasMapTitlePipe,
     IsValidMapLayoutPipe,
     FilterFormsPipe, 
-    IsValidFormLayoutPipe, 
-    // GetFormSchemaPipe, 
-    // GetFormTitlePipe,
-    // ElicitationComponent,
-    // FormMessageComponent,
-    ChatFormComponent
+    IsValidFormLayoutPipe,
+    ChatFormComponent,
+    ChatKanbanComponent,
+    FilterKanbanPipe,
+    IsKanbanLayoutPipe
   ],
   templateUrl: './chatbot.component.html',
   styleUrl: './chatbot.component.css',
@@ -164,128 +165,6 @@ export class ChatbotComponent{
   onFeatureClick(feature: FeatureDetail) {
     console.log('Feature clicked:', feature);
     // You can add additional logic here, like showing a detailed message
-  }
-
-  // Method to load sample map data (for testing)
-  loadSampleMapData() {
-    const sampleFeatures: FeatureDetail[] = [
-      {
-        id: '1',
-        name: 'Central Park',
-        type: 'Park',
-        coordinates: [-73.9688, 40.7851],
-        properties: {
-          area: '843 acres',
-          established: '1857',
-          visitors: '42 million annually'
-        },
-        style: {
-          color: '#28a745',
-          fillColor: '#28a745',
-          radius: 10,
-          fillOpacity: 0.6
-        }
-      },
-      {
-        id: '2',
-        name: 'Times Square',
-        type: 'Entertainment',
-        coordinates: [-73.9855, 40.7580],
-        properties: {
-          famousFor: 'Broadway theaters, electronic billboards',
-          annualVisitors: '50 million'
-        },
-        style: {
-          color: '#dc3545',
-          fillColor: '#dc3545',
-          radius: 8,
-          fillOpacity: 0.6
-        }
-      }
-    ];
-
-    const sampleWMSLayers: WMSLayer[] = [{
-      url: 'https://ows.terrestris.de/osm/service',
-      layers: 'OSM-WMS',
-      transparent: true
-    }];
-
-    this.featureDetails = sampleFeatures;
-    this.wmsLayers = sampleWMSLayers;
-    this.mapCenter = [-73.935242, 40.730610];
-    this.mapZoom = 11;
-  }
-
-  // Example method to send a map message
-  sendMapMessage() {
-    const mapMessage: Message = {
-      id: Date.now().toString(),
-      role: 'bot',
-      content: 'Here is the location data you requested:',
-      timestamp: new Date(),
-      layouts: [{
-        type: 'map',
-        data: {
-          features: this.featureDetails,
-          wmsLayers: this.wmsLayers,
-          center: this.mapCenter,
-          zoom: this.mapZoom,
-          title: 'Location Overview',
-          height: '300px'
-        }
-      }]
-    };
-
-    this.messages.push(mapMessage);
-    this.scrollToBottom();
-  }
-
-  // Example of receiving a map message from API
-  receiveMapDataFromAPI() {
-    // Simulate API response with map data
-    const apiResponse = {
-      content: 'I found these locations for you:',
-      layouts: [
-        {
-          type: 'map' as const,
-          data: {
-            features: [
-              {
-                id: 'api-1',
-                name: 'Eiffel Tower',
-                type: 'Landmark',
-                coordinates: [2.2945, 48.8584],
-                properties: {
-                  height: '324 meters',
-                  built: '1889'
-                },
-                style: {
-                  color: '#ff6b00',
-                  fillColor: '#ff6b00',
-                  radius: 12,
-                  fillOpacity: 0.6
-                }
-              }
-            ],
-            center: [2.3522, 48.8566],
-            zoom: 13,
-            title: 'Paris Locations',
-            height: '350px'
-          }
-        }
-      ] as Layout[]
-    };
-
-    const message: Message = {
-      id: Date.now().toString(),
-      role: 'bot',
-      content: apiResponse.content,
-      timestamp: new Date(),
-      layouts: apiResponse.layouts
-    };
-
-    this.messages.push(message);
-    this.scrollToBottom();
   }
 
   scrollToBottom(): void {
@@ -460,4 +339,111 @@ export class ChatbotComponent{
   // private generateId(): string {
   //   return Date.now().toString();
   // }
+
+  onKanbanAction(event: any) {
+    console.log('Kanban action from chat:', event);
+    
+    // Handle different kanban actions
+    switch (event.action.type) {
+      case 'add_card':
+        this.handleAddCardAction(event);
+        break;
+      case 'edit_card':
+        this.handleEditCardAction(event);
+        break;
+      case 'delete_card':
+        this.handleDeleteCardAction(event);
+        break;
+      case 'move_card':
+        this.handleMoveCardAction(event);
+        break;
+    }
+  }
+  
+  onKanbanBoardUpdated(event: any) {
+    console.log('Kanban board updated from chat:', event);
+    
+    // Send update to MCP server or backend
+    this.sendToMCP({
+      type: 'kanban_update',
+      layout_id: event.layout.data?.board_id,
+      data: event.data,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  private handleAddCardAction(event: any) {
+    // If action has a form, open it
+    if (event.action.action?.type === 'form') {
+      this.openKanbanForm(event.action.action, event.action.column);
+    } else {
+      // Direct tool call
+      this.sendToMCP({
+        type: 'kanban_add_card',
+        column_id: event.action.column?.id,
+        layout_id: event.layout.data?.board_id
+      });
+    }
+  }
+  
+  private handleEditCardAction(event: any) {
+    // Open edit form with card data
+    this.openKanbanForm(
+      event.action.action || { type: 'form', title: 'Edit Card' },
+      event.action.card
+    );
+  }
+  
+  private handleDeleteCardAction(event: any) {
+    this.sendToMCP({
+      type: 'kanban_delete_card',
+      card_id: event.action.card.id,
+      layout_id: event.layout.data?.board_id
+    });
+  }
+  
+  private handleMoveCardAction(event: any) {
+    this.sendToMCP({
+      type: 'kanban_move_card',
+      card_id: event.action.card.id,
+      from_column: event.action.fromColumn?.id,
+      to_column: event.action.toColumn?.id,
+      layout_id: event.layout.data?.board_id
+    });
+  }
+  
+  private openKanbanForm(formAction: any, context: any) {
+    // Create a form layout dynamically
+    const formLayout: Layout = {
+      type: 'form',
+      data: {
+        title: formAction.title || 'Kanban Form',
+        schema: formAction.form_schema,
+        metadata: {
+          formId: `kanban-form-${Date.now()}`,
+          context: context
+        },
+        actions: {
+          submit: formAction.submit_action || {
+            type: 'tool',
+            tool_name: 'kanban_submit_form'
+          },
+          cancel: {
+            type: 'cancel',
+            title: 'Cancel'
+          }
+        }
+      }
+    };
+    
+    // Add form as a new message
+    // this.addBotMessage('Please fill out this form:', [formLayout]);
+    console.log('Please fill out this form:', [formLayout])
+  }
+  
+  private sendToMCP(data: any) {
+    // Your existing MCP communication logic
+    console.log('Sending to MCP:', data);
+    // this.mcpService.executeTool(data).subscribe(...);
+  }
 }

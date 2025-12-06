@@ -1,0 +1,14 @@
+    <div class="chat-kanban-container" *ngIf="kanbanData">
+      <!-- Kanban Board -->
+      <app-kanban-board
+        [data]="kanbanData"
+        (actionTriggered)="onKanbanAction($event)"
+        (boardUpdated)="onBoardUpdated($event)">
+      </app-kanban-board>
+      
+      <!-- Loading State -->
+      <div class="kanban-loading" *ngIf="isLoading">
+        <div class="loading-spinner"></div>
+        <span>Updating board...</span>
+      </div>
+    </div>

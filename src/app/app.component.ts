@@ -12,7 +12,7 @@ import { MatListModule } from '@angular/material/list';
 import { OpenAiService } from './services/open-ai.service';
 import { McpClientComponent } from './mcp-client/mcp-client.component';
 import { NamedItem, OpenAiConfig, OpenAIFunctions } from './common';
-import { AIMessage, AIMessageChunk } from "@langchain/core/messages";
+import { AIMessage, AIMessageChunk, BaseMessage, HumanMessage, ToolCall, ToolMessage } from "@langchain/core/messages";
 import { RunnableSequence } from "@langchain/core/runnables";
 import { ElicitationComponent } from './components/elicitation/elicitation.component';
 import { McpElicitationService } from './services/mcp/mcp-elicitation.service';
@@ -23,10 +23,22 @@ import { OpenAITool } from './constants/toolschema';
 import { TableLayout } from './components/models/message.model';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { AgentExecutorState, createAgentExecutor, ToolNode } from '@langchain/langgraph/prebuilt';
+import { Tool } from 'langchain';
 interface DialogData {
   page: string;
   server: string;
   open_ai_token: string;
+}
+
+// Define a proper interface for your chat messages
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'bot' | 'tool';
+  content: string;
+  timestamp: Date;
+  layouts?: any[];
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
 }
 @Component({
   selector: 'app-root',
@@ -76,7 +88,10 @@ export class AppComponent implements OnDestroy {
   private activeSubscriptions: any[] = [];
   private activeStream: any = null;
 
-    private formSource: 'tool-test' | 'chat' | null = null;
+  private formSource: 'tool-test' | 'chat' | null = null;
+  private agentExecutor: any;
+  private langGraph: any;
+  // private toolExecutor: ToolNode;
   constructor(private mcpService: McpService, private openAIService: OpenAiService, 
     private storageService: StorageService,
     private mcpElicitationService: McpElicitationService, private cdr: ChangeDetectorRef) {
@@ -243,6 +258,12 @@ private initializeSidebarState() {
                         this.llm_with_tools.model_with_tools
                       ]);
 
+              // Create Agent Executor using the compiled graph
+              // this.agentExecutor = createAgentExecutor({
+              //   agentRunnable: this.llm_runnable,
+              //   tools: tools  // Pass ToolExecutor, not raw tools array
+              // });
+
               } catch (error) {
                 
               }
@@ -264,7 +285,7 @@ private initializeSidebarState() {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-toolsList(tools: OpenAITool[]){
+toolsList(tools: Array<OpenAITool>){
   this.InitializeLLM(this.openAiKey(), tools)
 }
 
@@ -351,8 +372,7 @@ tool_request(form: {request: string}){
 async agentWorkflow(userInput: string) {
    if (this.destroyed) return;
   let fullChunk: AIMessageChunk | null = null;
-  // let inputMessages: Array<any> = []
-  // const usedTools = new Set<string>();
+
   this.inputMessages.push({ role: 'user', content: userInput });
   this.chatMessages.push({ role: 'user', content: userInput, timestamp: new Date() });
   console.log("all input message : ", this.inputMessages)
@@ -361,10 +381,6 @@ async agentWorkflow(userInput: string) {
     let continueLoop = true;
     let iteration = 0;
     const usedTools = new Set<string>();
-      
-      // Count total tools that will be used in this workflow
-      // const estimatedTotalTools = 5; // You can adjust this based on your logic
-      // let currentToolCount = 0;
       // Show loader at the start
     this.setLoadingState(true);
     this.updateProgress(0, 1); // Start with 0/1
@@ -456,25 +472,26 @@ async agentWorkflow(userInput: string) {
 
                     this.chatMessages.push({
                         role: 'bot',
-                        content: "```json \n " + JSON.stringify(contentWithoutLayouts, null, 2) + "\n```",
+                        // content: "```json \n " + JSON.stringify(contentWithoutLayouts, null, 2) + "\n```",
+                        content: "",
                         layouts: extract_results.layouts,
                         timestamp: new Date(),
                       });
                 console.log("check : ", this.chatMessages)
                 }else {
-                this.chatMessages.push({
-                    role: 'bot',
-                    content: "```json \n " + toolOutput + "\n```",
-                    timestamp: new Date(),
-                  });
+                // this.chatMessages.push({
+                //     role: 'bot',
+                //     content: "```json \n " + toolOutput + "\n```",
+                //     timestamp: new Date(),
+                //   });
                 }
             } catch (parseError) {
               // Handle plain text response
-              this.chatMessages.push({
-                    role: 'bot',
-                    content: toolOutput,
-                    timestamp: new Date(),
-                  });              
+              // this.chatMessages.push({
+              //       role: 'bot',
+              //       content: toolOutput,
+              //       timestamp: new Date(),
+              //     });              
             }
 
         // Add tool call + output back to LLM context

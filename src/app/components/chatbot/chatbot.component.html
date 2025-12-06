@@ -119,7 +119,9 @@
                   <app-chat-form 
                     [formLayout]="layout"
                     (formSubmitted)="onChatFormSubmitted($event, message)"
-                    (formCancelled)="onChatFormCancelled()">
+                    (formCancelled)="onChatFormCancelled()"
+                    (kanbanAction)="onKanbanAction($event)"
+                    (kanbanBoardUpdated)="onKanbanBoardUpdated($event)">
                   </app-chat-form>
                 } @else {
                   <div class="invalid-form">
@@ -130,6 +132,28 @@
             }
           </div>
         }
+
+
+            <!-- Kanban layouts (NEW) -->
+            @if (message.layouts && message.layouts.length > 0) {
+              <div class="kanban-layouts">
+                @for (layout of message.layouts | filterKanban; track $index) {
+                  <div class="kanban-container">
+                    @if (layout | isKanbanLayout) {
+                      <app-chat-kanban 
+                        [kanbanLayout]="layout"
+                        (actionTriggered)="onKanbanAction($event)"
+                        (boardUpdated)="onKanbanBoardUpdated($event)">
+                      </app-chat-kanban>
+                    } @else {
+                      <div class="invalid-kanban">
+                        Invalid kanban layout
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
 
         <div class="message-time">{{message.timestamp | date:'shortTime'}}</div>
       </div>

@@ -1,0 +1,329 @@
+<div class="kanban-container" [class.compact]="settings.compact_view">
+  <!-- Board Header -->
+  <div class="kanban-header">
+    <div class="board-info">
+      <h2>{{ data.board_title }}</h2>
+      <div class="board-meta" *ngIf="data.metadata">
+        <span class="meta-item">
+          <i class="icon-cards"></i> {{ totalCards }} cards
+        </span>
+        <span class="meta-item">
+          <i class="icon-updated"></i> Updated {{ formatDate(data.metadata.updated_at) }}
+        </span>
+        <span class="meta-item" *ngIf="data.metadata.created_by">
+          <i class="icon-user"></i> {{ data.metadata.created_by }}
+        </span>
+      </div>
+    </div>
+    
+    <div class="board-actions">
+      <button *ngIf="settings.allow_card_creation" 
+              class="btn-add-card" 
+              (click)="openAddCardDialog()">
+        <i class="icon-plus"></i> Add Card
+      </button>
+      <button class="btn-settings" (click)="toggleSettings()">
+        <i class="icon-settings"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" *ngIf="showSettings">
+    <div class="settings-content">
+      <h3>Board Settings</h3>
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" [(ngModel)]="settings.compact_view" />
+          Compact View
+        </label>
+      </div>
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" [(ngModel)]="settings.show_wip_limits" />
+          Show WIP Limits
+        </label>
+      </div>
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" [(ngModel)]="settings.show_avatars" />
+          Show Avatars
+        </label>
+      </div>
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" [(ngModel)]="settings.auto_save" />
+          Auto Save Changes
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Board Columns -->
+  <div class="kanban-board" 
+       cdkDropListGroup
+       [class.columns-overflow]="data.columns.length > 4">
+    
+    <div *ngFor="let column of data.columns" 
+         class="kanban-column"
+         [style.border-top-color]="column.color || '#e0e0e0'">
+      
+      <!-- Column Header -->
+      <div class="column-header">
+        <div class="column-title">
+          <span class="column-icon" *ngIf="column.icon">
+            <i [class]="'icon-' + column.icon"></i>
+          </span>
+          <h3>{{ column.title }}</h3>
+          <span class="card-count">{{ column.cards.length }}</span>
+        </div>
+        
+        <div class="column-actions">
+          <button class="btn-column-add" 
+                  *ngIf="settings.allow_card_creation"
+                  (click)="openAddCardDialog(column)">
+            <i class="icon-plus-small"></i>
+          </button>
+          <span class="wip-limit" *ngIf="settings.show_wip_limits && column.wip_limit">
+            WIP: {{ column.cards.length }}/{{ column.wip_limit }}
+          </span>
+        </div>
+      </div>
+
+      <!-- WIP Limit Warning -->
+      <div class="wip-warning" 
+           *ngIf="column.wip_limit && column.cards.length > column.wip_limit">
+        <i class="icon-warning"></i>
+        Exceeds WIP limit by {{ column.cards.length - column.wip_limit }}
+      </div>
+
+      <!-- Cards Container -->
+      <div class="cards-container"
+           cdkDropList
+           [cdkDropListData]="column.cards"
+           [cdkDropListConnectedTo]="getConnectedLists()"
+           (cdkDropListDropped)="drop($event, column.id)">
+        
+        <!-- Cards -->
+        <div *ngFor="let card of column.cards" 
+             class="kanban-card"
+             cdkDrag
+             [cdkDragData]="card"
+             (click)="openCardDetail(card)"
+             [class.card-priority-low]="card.priority === 'low'"
+             [class.card-priority-medium]="card.priority === 'medium'"
+             [class.card-priority-high]="card.priority === 'high'"
+             [class.card-priority-critical]="card.priority === 'critical'">
+          
+          <!-- Drag Handle -->
+          <div class="card-drag-handle" cdkDragHandle>
+            <i class="icon-drag"></i>
+          </div>
+
+          <!-- Card Content -->
+          <div class="card-content">
+            <div class="card-header">
+              <h4 class="card-title">{{ card.title }}</h4>
+              <button class="btn-card-menu" 
+                      (click)="$event.stopPropagation(); openCardMenu(card, $event)">
+                <i class="icon-more"></i>
+              </button>
+            </div>
+            
+            <p class="card-description" *ngIf="card.description">
+              {{ card.description | truncate:100 }}
+            </p>
+            
+            <!-- Tags -->
+            <div class="card-tags" *ngIf="card.tags && card.tags.length">
+              <span *ngFor="let tag of card.tags.slice(0, 3)" 
+                    class="tag"
+                    [style.background]="getTagColor(tag)">
+                {{ tag }}
+              </span>
+              <span *ngIf="card.tags.length > 3" class="tag-more">
+                +{{ card.tags.length - 3 }}
+              </span>
+            </div>
+            
+            <!-- Card Footer -->
+            <div class="card-footer">
+              <div class="footer-left">
+                <!-- Assignee Avatar -->
+                <div *ngIf="settings.show_avatars && card.assignee" 
+                     class="assignee-avatar"
+                     [title]="card.assignee">
+                  {{ getInitials(card.assignee) }}
+                </div>
+                
+                <!-- Due Date -->
+                <span class="due-date" 
+                      *ngIf="card.due_date"
+                      [class.overdue]="isOverdue(card.due_date)">
+                  <i class="icon-calendar"></i>
+                  {{ formatDueDate(card.due_date) }}
+                </span>
+              </div>
+              
+              <div class="footer-right">
+                <!-- Attachments -->
+                <span class="card-attachments" *ngIf="card.attachments && card.attachments.length > 0">
+                <i class="icon-attachment"></i>
+                {{ getCardAttachmentsLength(card) }}
+                </span>
+                
+                <!-- Comments -->
+                <span class="card-comments" *ngIf="card.comments && card.comments > 0">
+                  <i class="icon-comment"></i>
+                  {{ card.comments }}
+                </span>
+                
+                <!-- Priority Badge -->
+                <span class="priority-badge" [class]="'priority-' + card.priority">
+                  {{ card.priority | titlecase }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-column" *ngIf="column.cards.length === 0">
+          <i class="icon-empty"></i>
+          <p>No cards</p>
+          <button *ngIf="settings.allow_card_creation" 
+                  class="btn-add-to-empty"
+                  (click)="openAddCardDialog(column)">
+            Add a card
+          </button>
+        </div>
+
+        <!-- Add Card Placeholder -->
+        <div class="add-card-placeholder" 
+             *ngIf="isAddingCardToColumn === column.id"
+             (click)="openAddCardDialog(column)">
+          + Add another card
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Detail Modal -->
+  <div class="modal-overlay" *ngIf="selectedCard" (click)="closeCardDetail()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ selectedCard.title }}</h3>
+        <button class="btn-close" (click)="closeCardDetail()">
+          <i class="icon-close"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Card Details -->
+        <div class="card-detail-section">
+          <label>Description</label>
+          <p class="card-full-description">{{ selectedCard.description || 'No description' }}</p>
+        </div>
+        
+        <div class="detail-grid">
+          <div class="detail-item">
+            <label>Assignee</label>
+            <p>{{ selectedCard.assignee || 'Unassigned' }}</p>
+          </div>
+          
+          <div class="detail-item">
+            <label>Due Date</label>
+            <p [class.overdue]="isOverdue(selectedCard.due_date)">
+              {{ selectedCard.due_date ? formatDueDate(selectedCard.due_date) : 'No due date' }}
+            </p>
+          </div>
+          
+          <div class="detail-item">
+            <label>Priority</label>
+            <span class="priority-badge" [class]="'priority-' + selectedCard.priority">
+              {{ selectedCard.priority | titlecase }}
+            </span>
+          </div>
+          
+          <div class="detail-item">
+            <label>Status</label>
+            <p>{{ selectedCard.status | titlecase }}</p>
+          </div>
+        </div>
+        
+        <!-- Tags -->
+        <div class="card-detail-section" *ngIf="selectedCard.tags?.length">
+          <label>Tags</label>
+          <div class="tags-container">
+            <span *ngFor="let tag of selectedCard.tags" 
+                  class="tag detail-tag"
+                  [style.background]="getTagColor(tag)">
+              {{ tag }}
+            </span>
+          </div>
+        </div>
+        
+        <!-- Attachments -->
+        <div class="card-detail-section" *ngIf="selectedCard.attachments?.length">
+          <label>Attachments ({{ getSelectedCardAttachmentsLength() }})</label>
+          <div class="attachments-list">
+            <div *ngFor="let attachment of selectedCard.attachments" class="attachment-item">
+              <i [class]="'icon-file-' + attachment.type"></i>
+              <a [href]="attachment.url" target="_blank" class="attachment-link">
+                {{ attachment.name }}
+              </a>
+              <span class="attachment-size">{{ getFileSize(attachment) }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Metadata -->
+        <div class="card-detail-section" *ngIf="selectedCard.metadata">
+          <label>Additional Information</label>
+          <pre class="metadata-json">{{ selectedCard.metadata | json }}</pre>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="btn-secondary" (click)="closeCardDetail()">
+          Close
+        </button>
+        <button class="btn-primary" (click)="editCard(selectedCard)">
+          Edit Card
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card Menu (Context Menu) -->
+  <div class="context-menu" 
+       *ngIf="showCardMenu" 
+       [style.top.px]="menuPosition.y"
+       [style.left.px]="menuPosition.x">
+    <ul>
+      <li (click)="editCard(selectedCardForMenu)">
+        <i class="icon-edit"></i> Edit
+      </li>
+      <li *ngIf="settings.allow_card_deletion" 
+          (click)="deleteCard(selectedCardForMenu)">
+        <i class="icon-delete"></i> Delete
+      </li>
+      <li (click)="moveCardToColumn(selectedCardForMenu, 'todo')">
+        <i class="icon-move"></i> Move to Todo
+      </li>
+      <li (click)="moveCardToColumn(selectedCardForMenu, 'in_progress')">
+        <i class="icon-move"></i> Move to In Progress
+      </li>
+      <li (click)="moveCardToColumn(selectedCardForMenu, 'done')">
+        <i class="icon-move"></i> Move to Done
+      </li>
+      <li class="divider"></li>
+      <li (click)="copyCardLink(selectedCardForMenu)">
+        <i class="icon-link"></i> Copy Link
+      </li>
+      <li (click)="exportCard(selectedCardForMenu)">
+        <i class="icon-export"></i> Export as JSON
+      </li>
+    </ul>
+  </div>
+</div>

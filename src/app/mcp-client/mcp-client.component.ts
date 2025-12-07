@@ -8,7 +8,8 @@ import { OpenAITool } from '../constants/toolschema';
 import { StorageService } from '../services/storage.service';
 import { MatDialog } from '@angular/material/dialog';
 import { DomainDialogComponent } from '../components/domain-dialog/domain-dialog.component';
-
+import { ToolformatterService } from '../services/toolformatter.service';
+import { DynamicStructuredTool, Tool } from 'langchain';
 interface ElicitResponse {
   action: 'accept' | 'decline' | 'cancel';
   data?: any;
@@ -47,11 +48,13 @@ export class McpClientComponent implements OnInit, OnDestroy {
         domain: this.openAiKey() || '',
         page: 'open_ai_token'
       };
-  @Output() tools = new EventEmitter<OpenAITool[]>();
+  @Output() tools = new EventEmitter<{open_ai_tools: OpenAITool[], langchain_tools: DynamicStructuredTool[]}>();
+  // @Output() langChainTools = new EventEmitter<DynamicStructuredTool[]>;
   @Output() sendOpenAiKey = new EventEmitter<string>();
 
   constructor(private mcpService: McpService, 
     private storageService: StorageService,
+    private toolFormatter: ToolformatterService,
     private elicitationService: McpElicitationService) {}
 
   ngOnInit(): void {
@@ -88,8 +91,10 @@ export class McpClientComponent implements OnInit, OnDestroy {
       this.loader = true;
       await this.mcpService.connect(url);
       this.mcpService.tools$.subscribe(tools => {
-        const openai_tools = this.mcpService.createOpenAiToolSchema(tools);
-        this.tools.emit(openai_tools);
+        const openai_tools = this.toolFormatter.formatMultipleTools(tools);
+        const langChain_tools = this.toolFormatter.convertMultipleTools(tools)
+        this.tools.emit({open_ai_tools: openai_tools, langchain_tools: langChain_tools});
+        // this.langChainTools.emit(langChain_tools);
       });
       this.loader = false;
     } catch (error) {

@@ -12,34 +12,20 @@ import { MatListModule } from '@angular/material/list';
 import { OpenAiService } from './services/open-ai.service';
 import { McpClientComponent } from './mcp-client/mcp-client.component';
 import { NamedItem, OpenAiConfig, OpenAIFunctions } from './common';
-import { AIMessage, AIMessageChunk, BaseMessage, HumanMessage, ToolCall, ToolMessage } from "@langchain/core/messages";
-import { RunnableSequence } from "@langchain/core/runnables";
+import { AIMessageChunk, ToolCall, ToolMessage } from "@langchain/core/messages";
+import { RunnableSequence, RunnableWithMessageHistory } from "@langchain/core/runnables";
 import { ElicitationComponent } from './components/elicitation/elicitation.component';
 import { McpElicitationService } from './services/mcp/mcp-elicitation.service';
-import { DomainDialogComponent } from './components/domain-dialog/domain-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 import { StorageService } from './services/storage.service';
 import { OpenAITool } from './constants/toolschema';
 import { TableLayout } from './components/models/message.model';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { AgentExecutorState, createAgentExecutor, ToolNode } from '@langchain/langgraph/prebuilt';
-import { Tool } from 'langchain';
-interface DialogData {
-  page: string;
-  server: string;
-  open_ai_token: string;
-}
+import { DynamicStructuredTool, Tool } from 'langchain';
+import { ToolformatterService } from './services/toolformatter.service';
+import { ChatMessageHistory } from "@langchain/classic/memory";
 
-// Define a proper interface for your chat messages
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'bot' | 'tool';
-  content: string;
-  timestamp: Date;
-  layouts?: any[];
-  tool_calls?: ToolCall[];
-  tool_call_id?: string;
-}
 @Component({
   selector: 'app-root',
   imports: [InputBoxComponent, ChatbotComponent, SidebarComponent, MatSidenavModule, McpClientComponent,
@@ -92,8 +78,10 @@ export class AppComponent implements OnDestroy {
   private agentExecutor: any;
   private langGraph: any;
   // private toolExecutor: ToolNode;
+  private chatHistory: ChatMessageHistory = new ChatMessageHistory();
+  private finalRetrievalChain: any;
   constructor(private mcpService: McpService, private openAIService: OpenAiService, 
-    private storageService: StorageService,
+    private storageService: StorageService, private toolFormatter: ToolformatterService,
     private mcpElicitationService: McpElicitationService, private cdr: ChangeDetectorRef) {
 
     this.checkScreenSize();
@@ -240,16 +228,18 @@ private initializeSidebarState() {
     }    
   }
 
-  InitializeLLM(token: string, tools: OpenAITool[] = []){
+ async InitializeLLM(token: string, tools: OpenAITool[] = [], langchainTools: DynamicStructuredTool[]=[]){
       let options: OpenAiConfig = {
         openAIKey: token
       }
         this.llm_model = this.openAIService.getOpenAiClient(options)  
-        if (tools.length > 0){
+        if (langchainTools.length > 0){
             try {
+              // console.log("open ai tools : ", tools);
+              // console.log("langchain tools : ", langchainTools);
                 this.llm_with_tools = this.openAIService.openAImodels("langchain", 
                 this.llm_model,
-                tools,
+                langchainTools,
                 this.system_prompt,
                 this.human_prompt
                 );
@@ -257,12 +247,23 @@ private initializeSidebarState() {
                         this.llm_with_tools.overall_prompt,
                         this.llm_with_tools.model_with_tools
                       ]);
+              this.finalRetrievalChain = new RunnableWithMessageHistory({
+                runnable: this.llm_runnable,
+                getMessageHistory: (_sessionId) => this.chatHistory,
+                historyMessagesKey: "history",
+                inputMessagesKey: "input",
+                outputMessagesKey: "output"
+              });
 
               // Create Agent Executor using the compiled graph
-              // this.agentExecutor = createAgentExecutor({
-              //   agentRunnable: this.llm_runnable,
-              //   tools: tools  // Pass ToolExecutor, not raw tools array
-              // });
+
+              // const agent2 = await createOpenAIToolsAgent({
+              //     llm: this.llm_model,
+              //     tools,
+              //     prompt: this.llm_with_tools.overall_prompt
+              //   });
+
+                // this.agentExecutor = createAgentExecutor({ agentRunnable: this.finalRetrievalChain, tools: tools as any });
 
               } catch (error) {
                 
@@ -285,8 +286,11 @@ private initializeSidebarState() {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
-toolsList(tools: Array<OpenAITool>){
-  this.InitializeLLM(this.openAiKey(), tools)
+toolsList(tools: {open_ai_tools: Array<OpenAITool>, langchain_tools: Array<DynamicStructuredTool>}){
+  this.InitializeLLM(this.openAiKey(), tools.open_ai_tools, tools.langchain_tools)
+}
+langChainToolList(){
+
 }
 
 testTool(tool: NamedItem | null){
@@ -316,25 +320,13 @@ tool_response(form: {response: string, layouts?: Array<any>}){
           layouts: form.layouts,
           timestamp: new Date()
         });
-      // Check if response contains form layouts
-    // if (form.layouts?.some(layout => layout.type === 'form')) {
-    //   // If form came from tool test, hide the main elicitation
-    //   if (this.formSource === 'tool-test') {
-    //     this.selectedTool = null; // This will hide the main elicitation component
-    //     this.formSource = 'chat'; // Now the form is in chat
-    //   }
-    // }
-  }else{
+    }else{
 
-  }
-  // setTimeout(() => {
-  //   this.chatComponent.scrollToBottom(); // Force scroll
-  // }, 0);
+    }
+
 }
 
 tool_request(form: {request: string}){
-  // this.isSidebarOpen = false;
-   // Only close sidebar on mobile
   if (this.isMobileScreen) {
     this.isSidebarOpen = false;
   }
@@ -369,177 +361,332 @@ tool_request(form: {request: string}){
     return this.selectedTool !== null && this.formSource !== 'chat';
   }
 
+// async agentWorkflow(userInput: string) {
+//    if (this.destroyed) return;
+//   let fullChunk: AIMessageChunk | null = null;
+//   await this.debugChatHistory();
+//   // this.inputMessages.push({ role: 'user', content: userInput });
+//   this.chatMessages.push({ role: 'user', content: userInput, timestamp: new Date() });
+//   // console.log("all input message : ", this.inputMessages)
+
+//   try {
+//     await this.chatHistory.addUserMessage(userInput);
+//     let continueLoop = true;
+//     let iteration = 0;
+//     const usedTools = new Set<string>();
+//       // Show loader at the start
+//     this.setLoadingState(true);
+//     this.updateProgress(0, 1); // Start with 0/1
+//     while (continueLoop && iteration < 20 && !this.destroyed) { // safety limit
+//       iteration++;
+//       // Create abort controller for this stream
+//         const abortController = new AbortController();
+//       try {
+//       const stream = await this.finalRetrievalChain.stream(
+//         { input: userInput, history: await this.chatHistory.getMessages(), agent_scratchpad: [] },
+//         { configurable: { sessionId: "test" }, signal: abortController.signal}
+//       );
+//       this.activeStream = stream;
+//       fullChunk = null;
+//       this.chatMessages.push({ role: 'bot', content: '', timestamp: new Date() });
+//       const lastIndex = this.chatMessages.length - 1;
+//       for await (const chunk of stream) {
+//         if (this.destroyed) {
+//               abortController.abort();
+//               break;
+//             }
+//         if (chunk instanceof AIMessageChunk) {
+//           fullChunk = fullChunk ? fullChunk.concat(chunk) : chunk;
+//           this.chatMessages[lastIndex].content = fullChunk.content;
+//           this.cdr.detectChanges();
+//         }
+//         if (chunk.event === "on_agent_finish") {
+//           console.log("\n--- Agent Finish ---");
+//           console.log(`Final Answer: ${chunk.data.output.output}`);
+//           console.log("--------------------");
+//         }
+//       }
+//       // Add tool call + output back to LLM context
+//       if(fullChunk){
+//         await this.chatHistory.addAIMessage(fullChunk.content as string);
+//       }
+      
+//       } catch (streamError: any) {
+//           if (streamError.name === 'AbortError') {
+//             console.log('Stream aborted due to component destruction');
+//             return;
+//           }
+//           throw streamError;
+//         }finally {
+//           this.activeStream = null;
+//         }
+
+//       if (this.destroyed) break;
+//       // Check for tool calls
+//       const toolCalls: ToolCall[] = fullChunk?.tool_calls ?? [];
+
+//       if (toolCalls.length === 0) {
+//         // No more tools → stop loop
+//         continueLoop = false;
+//         break;
+//       }
+      
+//       // Process tools once per iteration
+//       // Update total tools for progress calculation
+//       this.updateProgress(0, toolCalls.length);
+
+//       // for (const toolCall of toolCalls) {
+//       for (let i = 0; i < toolCalls.length; i++) {
+//         if (this.destroyed) break;
+
+//         const toolCall = toolCalls[i];
+//         const tool_id = toolCall.id? toolCall.id: `tool-call-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 9)}`;
+//           const newToolCall = new AIMessage({
+//             tool_calls: [toolCall]
+//           });
+//           await this.chatHistory.addMessage(newToolCall);
+//         // Avoid repeating same tool
+//         if (usedTools.has(toolCall.name)) {
+//           console.warn(`Skipping repeated tool: ${toolCall.name}`);
+//           continueLoop = false;
+//           break;
+//         }
+//         usedTools.add(toolCall.name);
+//         this.updateProgress(i+1, toolCalls.length);
+//         this.setLoadingState(true);
+//         // Call MCP tool
+//         try {
+//         const ragResponse = await this.mcpService.callTool(toolCall.name, toolCall.args);
+//         this.setLoadingState(false);
+//         const toolOutput = Array.isArray(ragResponse?.content)
+//           ? ragResponse.content.map((c: { type: string; text: string }) => c.text).join('\n')
+//           : JSON.stringify(ragResponse);
+//           // console.log("Tool response : ", toolOutput);
+//             try {
+//               const extract_results = JSON.parse(ragResponse["content"][0]["text"])
+//               // console.log("Extract Results : ", extract_results);
+//                 const server_keys = Object.keys(extract_results);
+//                 // console.log("Extract Results : ", server_keys);
+//                 if(server_keys.includes("layouts")){
+
+//                     // Create response with only specific fields (excluding layouts)
+//                     const { layouts, ...contentWithoutLayouts } = extract_results;
+
+//                     this.chatMessages.push({
+//                         role: 'bot',
+//                         content: "",
+//                         layouts: extract_results.layouts,
+//                         timestamp: new Date(),
+//                       });
+//                 }else {
+
+//                 }
+//             } catch (parseError) {          
+//             }
+
+//           const toolResponse = new ToolMessage({
+//                   tool_call_id: tool_id,
+//                   status: "success",
+//                   content: toolOutput
+//           })
+//           // IMPORTANT: Add tool result to chat history
+//           await this.chatHistory.addMessage(toolResponse);
+//         } catch (toolError) {
+//           console.error(`Tool ${toolCall.name} error:`, toolError);
+//           // Add error as ToolMessage to history
+//           const errorToolMessage = new ToolMessage({
+//             tool_call_id: tool_id,
+//             content: `Error: ${toolError}`,
+//             status: "error",
+//             name: toolCall.name,
+//           });
+//           await this.chatHistory.addMessage(errorToolMessage);
+//           this.chatMessages.push({
+//             role: 'bot',
+//             content: `Error executing tool ${toolCall.name}: ${toolError}`,
+//             timestamp: new Date(),
+//           });
+          
+//           continueLoop = false;
+//           break;
+//         }
+
+//       }
+//       // console.log("input messages : ", this.inputMessages);
+//     }
+//   } catch (error) {
+//      if (this.destroyed) return;
+//     console.error("Agent workflow error:", error);
+//     this.chatMessages.push({
+//       role: 'bot',
+//       content: 'Sorry, something went wrong while processing your request.',
+//       timestamp: new Date(),
+//     });
+//   }finally {
+//     // Always hide loader and reset progress when done
+//     await this.debugChatHistory();
+//     if (!this.destroyed) {
+//       this.setLoadingState(false);
+//       this.updateProgress(0, 0);
+//     }
+//   }
+// }
+
 async agentWorkflow(userInput: string) {
-   if (this.destroyed) return;
-  let fullChunk: AIMessageChunk | null = null;
-
-  this.inputMessages.push({ role: 'user', content: userInput });
-  this.chatMessages.push({ role: 'user', content: userInput, timestamp: new Date() });
-  console.log("all input message : ", this.inputMessages)
-
+  if (this.destroyed) return;
+  // await this.debugChatHistory();
   try {
-    let continueLoop = true;
-    let iteration = 0;
-    const usedTools = new Set<string>();
-      // Show loader at the start
+    // UI — add user message
+    this.chatMessages.push({
+      role: "user",
+      content: userInput,
+      timestamp: new Date(),
+    });
+
+    // Loader
     this.setLoadingState(true);
     this.updateProgress(0, 1); // Start with 0/1
-    while (continueLoop && iteration < 20 && !this.destroyed) { // safety limit
-      iteration++;
+    // let continueLoop = true;
+    // let iteration = 0;
+    // const usedTools = new Set<string>();
+    // while (continueLoop && iteration < 10 && !this.destroyed) {
+      // iteration++;
 
-      // Create abort controller for this stream
-        const abortController = new AbortController();
-      try {
-      const stream = await this.llm_runnable.stream({ input: this.inputMessages }, { signal: abortController.signal });
+      // ---- 1. RUN AGENT (stream) ----
+      const abortController = new AbortController();
+      const stream = await this.finalRetrievalChain.stream(
+        {
+          input: userInput,
+          history: await this.chatHistory.getMessages(),
+          agent_scratchpad: [],
+        },
+        { configurable: { sessionId: "test" }, signal: abortController.signal }
+      );
+
       this.activeStream = stream;
-      fullChunk = null;
-      this.chatMessages.push({ role: 'bot', content: '', timestamp: new Date() });
+      let fullChunk: AIMessageChunk | null = null;
+
+      // UI placeholder for bot message
+      this.chatMessages.push({
+        role: "bot",
+        content: "",
+        timestamp: new Date(),
+      });
+      const lastIndex = this.chatMessages.length - 1;
+
       for await (const chunk of stream) {
-        if (this.destroyed) {
-              abortController.abort();
-              break;
-            }
         if (chunk instanceof AIMessageChunk) {
           fullChunk = fullChunk ? fullChunk.concat(chunk) : chunk;
-          const lastIndex = this.chatMessages.length - 1;
+
+          // UI streaming
           this.chatMessages[lastIndex].content = fullChunk.content;
           this.cdr.detectChanges();
-          setTimeout(() => {
-              if (!this.destroyed) {
-                  this.chatComponent.scrollToBottom();
-                }
-            }, 0);
         }
       }
-      } catch (streamError: any) {
-          if (streamError.name === 'AbortError') {
-            console.log('Stream aborted due to component destruction');
-            return;
-          }
-          throw streamError;
-        }finally {
-          this.activeStream = null;
-        }
 
-      if (this.destroyed) break;
-      // Check for tool calls
+      // ---- 2. Convert fullChunk → Proper AIMessage ----
+      // if (!fullChunk) {
+      //   continueLoop = false;
+      //   break;
+      // }
+
       const toolCalls = fullChunk?.tool_calls ?? [];
-
-      if (toolCalls.length === 0) {
-        // No more tools → stop loop
-        continueLoop = false;
-        break;
-      }
-      
-      // Process tools once per iteration
-      // Update total tools for progress calculation
+      // ---- 3. If no tool calls → exit loop ----
+      // if (toolCalls.length === 0) {
+      //   // await this.chatHistory.addAIMessage(fullChunk.content as string);
+      //   continueLoop = false;
+      //   break;
+      // }
       this.updateProgress(0, toolCalls.length);
-
-      // for (const toolCall of toolCalls) {
-      for (let i = 0; i < toolCalls.length; i++) {
-        if (this.destroyed) break;
-
-        const toolCall = toolCalls[i];
+      // ---- 4. Execute Tools ----
+      for (const [i, toolCall] of toolCalls.entries()) {
+        const toolId = toolCall.id? toolCall.id: `tool-call-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        // const toolId = toolCall.id;
         const toolName = toolCall.name;
         const toolArgs = toolCall.args;
 
-        // Avoid repeating same tool
-        if (usedTools.has(toolName)) {
-          console.warn(`Skipping repeated tool: ${toolName}`);
-          continueLoop = false;
-          break;
-        }
-        usedTools.add(toolName);
+        let toolResultText = "";
         this.updateProgress(i+1, toolCalls.length);
-        this.setLoadingState(true);
-        // Call MCP tool
+        // if (usedTools.has(toolCall.name)) {
+        //   console.warn(`Skipping repeated tool: ${toolCall.name}`);
+        //   continueLoop = false;
+        //   break;
+        // }
         try {
-        const ragResponse = await this.mcpService.callTool(toolName, toolArgs);
-        this.setLoadingState(false);
-        const toolOutput = Array.isArray(ragResponse?.content)
-          ? ragResponse.content.map((c: { type: string; text: string }) => c.text).join('\n')
-          : JSON.stringify(ragResponse);
-          // console.log("Tool response : ", toolOutput);
-            try {
-              const extract_results = JSON.parse(ragResponse["content"][0]["text"])
-              // console.log("Extract Results : ", extract_results);
+          const toolResult = await this.mcpService.callTool(toolName, toolArgs);
+          toolResultText = Array.isArray(toolResult?.content)
+            ? toolResult.content.map((c:any) => c.text).join("\n")
+            : JSON.stringify(toolResult);
+          try {
+              const extract_results = JSON.parse(toolResult["content"][0]["text"])
+              console.log("Extract Results : ", extract_results);
                 const server_keys = Object.keys(extract_results);
                 // console.log("Extract Results : ", server_keys);
                 if(server_keys.includes("layouts")){
-
                     // Create response with only specific fields (excluding layouts)
                     const { layouts, ...contentWithoutLayouts } = extract_results;
-
                     this.chatMessages.push({
                         role: 'bot',
-                        // content: "```json \n " + JSON.stringify(contentWithoutLayouts, null, 2) + "\n```",
                         content: "",
                         layouts: extract_results.layouts,
                         timestamp: new Date(),
                       });
-                console.log("check : ", this.chatMessages)
                 }else {
-                // this.chatMessages.push({
-                //     role: 'bot',
-                //     content: "```json \n " + toolOutput + "\n```",
-                //     timestamp: new Date(),
-                //   });
+                  this.chatMessages.push({
+                        role: "bot",
+                        content: toolResultText,
+                        timestamp: new Date(),
+                      });
                 }
-            } catch (parseError) {
-              // Handle plain text response
-              // this.chatMessages.push({
-              //       role: 'bot',
-              //       content: toolOutput,
-              //       timestamp: new Date(),
-              //     });              
+            } catch (parseError) {    
+
             }
-
-        // Add tool call + output back to LLM context
-        this.inputMessages.push({
-          role: 'assistant',
-          type: 'function_call',
-          id: toolCall.id,
-          name: toolName,
-          arguments: JSON.stringify(toolArgs)
-        });
-
-        this.inputMessages.push({
-          role: 'tool',
-          type: 'function_call_output',
-          id: toolCall.id,
-          output: toolOutput,
-        });
-        } catch (toolError) {
-          console.error(`Tool ${toolName} error:`, toolError);
-          
+        } catch (err) {
+          toolResultText = `Error: ${err}`;
           this.chatMessages.push({
-            role: 'bot',
-            content: `Error executing tool ${toolName}: ${toolError}`,
-            timestamp: new Date(),
-          });
-          
-          continueLoop = false;
-          break;
+                        role: "bot",
+                        content: toolResultText,
+                        timestamp: new Date(),
+                      });
         }
 
+        // ---- 5. Add ToolMessage back to memory ----
+        const toolMessage = new ToolMessage({
+          tool_call_id: toolId,
+          status: "success",
+          content: toolResultText,
+        });
+
+        await this.chatHistory.addMessage(toolMessage);
       }
-      console.log("input messages : ", this.inputMessages);
-    }
-  } catch (error) {
-     if (this.destroyed) return;
-    console.error("Agent workflow error:", error);
+    // }
+  } catch (err) {
+    console.error("Agent workflow failed:", err);
     this.chatMessages.push({
-      role: 'bot',
-      content: 'Sorry, something went wrong while processing your request.',
+      role: "bot",
+      content: "Something went wrong while processing your request.",
       timestamp: new Date(),
     });
-  }finally {
-    // Always hide loader and reset progress when done
-    if (!this.destroyed) {
-      this.setLoadingState(false);
-      this.updateProgress(0, 0);
-    }
+  } finally {
+    this.setLoadingState(false);
+    this.activeStream = null;
+    this.updateProgress(0, 0);
+
   }
+}
+
+
+async debugChatHistory() {
+  const messages = await this.chatHistory.getMessages();
+  // console.log("Chat History Messages:", messages);
+  messages.forEach((msg, index) => {
+    console.log(`[${index}] ${msg._getType()}:`, {
+      content: msg.content,
+      tool_calls: (msg as any).tool_calls,
+      tool_call_id: (msg as any).tool_call_id,
+      name: (msg as any).name
+    });
+  });
 }
 
 // Add this method to your class

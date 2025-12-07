@@ -1,15 +1,15 @@
 import { Injectable } from '@angular/core';
 import { ChatOpenAI, AzureChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { ChatPromptTemplate, MessagesPlaceholder } from "@langchain/core/prompts";
 import { 
   SystemMessagePromptTemplate, 
   HumanMessagePromptTemplate 
 } from "@langchain/core/prompts";
-import { AzureOpenAI } from "openai";
 
 // import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { OpenAiConfig } from '../common';
+
 
 @Injectable({
   providedIn: 'root'
@@ -60,7 +60,9 @@ openAImodels(type: string = "langchain", open_ai_model:any, tools: Array<any>, s
     
     const prompt = ChatPromptTemplate.fromMessages([
           SystemMessagePromptTemplate.fromTemplate(systemPrompt),
-          HumanMessagePromptTemplate.fromTemplate(humanPrompt)
+          new MessagesPlaceholder("history"),
+          HumanMessagePromptTemplate.fromTemplate(humanPrompt),
+          new MessagesPlaceholder("agent_scratchpad")
         ]);
 
     // const agent = await createToolCallingAgent({ llm: llm_with_functions, tools, prompt });

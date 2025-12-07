@@ -9,20 +9,23 @@
   }
 
 </div>
-<div *ngIf="isConnected; else disconnected">  
-  <!-- Notifications -->
-  <div class="notifications">
-    <h6>Notifications ({{ notifications.length }})</h6>
-    <div *ngFor="let notification of notifications" class="notification">
-      <strong>{{ notification.type }}:</strong> {{ notification.message }}
+@if (isConnected) {
+  <div>
+    <!-- Notifications -->
+    <div class="notifications">
+      <h6>Notifications ({{ notifications.length }})</h6>
+      @for (notification of notifications; track notification) {
+        <div class="notification">
+          <strong>{{ notification.type }}:</strong> {{ notification.message }}
+        </div>
+      }
     </div>
   </div>
-</div>
-
-<ng-template #disconnected>
+} @else {
   <!-- <h5>Disconnected from MCP Server</h5> -->
   <button (click)="connect(mcpServer())">Connect</button>
   @if (loader) {
     <img src="gif/Spinner.gif"/>
   }
-</ng-template>
+}
+

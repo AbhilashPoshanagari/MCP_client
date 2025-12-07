@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output, OnInit, afterNextRender,
   OnDestroy, inject, Injector, ViewChild } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common'; 
+ 
 // import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,9 +18,7 @@ import {CdkTextareaAutosize, TextFieldModule} from '@angular/cdk/text-field';
 
 @Component({
   selector: 'app-input-box',
-  imports: [FormsModule, ReactiveFormsModule, CommonModule, MatMenuModule, 
-    MatIconModule, MatInputModule, MatFormFieldModule, MatMenuTrigger, MatChipsModule,
-    TextFieldModule],
+  imports: [FormsModule, ReactiveFormsModule, MatMenuModule, MatIconModule, MatInputModule, MatFormFieldModule, MatMenuTrigger, MatChipsModule, TextFieldModule],
   templateUrl: './input-box.component.html',
   styleUrl: './input-box.component.css',
   standalone: true

@@ -4,7 +4,7 @@ import {MatTabsModule} from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
 import { MatNavList } from '@angular/material/list';
 import { MatListModule } from '@angular/material/list';
-import { CommonModule } from '@angular/common';
+
 interface NamedItem {
   name: string;
 }
@@ -19,7 +19,7 @@ interface Tool extends NamedItem {
 
 @Component({
   selector: 'app-sidebar',
-  imports: [MatTabsModule, MatIconModule, MatNavList, MatListModule, CommonModule],
+  imports: [MatTabsModule, MatIconModule, MatNavList, MatListModule],
   providers: [McpService],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',

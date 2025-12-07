@@ -1,6 +1,6 @@
 import { Component, Input, Inject, OnInit } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -8,7 +8,7 @@ import { RestApiService } from '../../services/rest-api.service';
 
 @Component({
   selector: 'app-domain-dialog',
-  imports: [CommonModule, FormsModule, MatFormFieldModule, MatInputModule],
+  imports: [FormsModule, MatFormFieldModule, MatInputModule],
   templateUrl: './domain-dialog.component.html',
   styleUrl: './domain-dialog.component.css',
   standalone: true

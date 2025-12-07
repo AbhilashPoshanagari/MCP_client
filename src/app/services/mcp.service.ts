@@ -191,9 +191,9 @@ export class McpService {
         localStorage.setItem('mcp_session_id', this.sessionId);
       }
       // console.log('Transport created with session ID:', this.sessionId);
-      console.log('Connected to MCP server');
       this.connectionStatusSubject.next(true);
       this.messageSource.next(true)
+      // Get tools with custom configuration
       this.listTools()
       this.listPrompts()
       this.listResources()
@@ -432,6 +432,7 @@ initializeElicitationHandler(client: Client): void {
 
   });
 }
+
 
 
 

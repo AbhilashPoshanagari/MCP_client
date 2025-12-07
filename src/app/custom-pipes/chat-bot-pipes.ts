@@ -1,6 +1,6 @@
 // table.pipe.ts
 import { Pipe, PipeTransform } from '@angular/core';
-import { ButtonLayout, FeatureDetail, Layout, MapLayout, TableLayout, WMSLayer } from '../components/models/message.model';
+import { ButtonLayout, FeatureDetail, Layout, MapLayout, TableFormat, TableLayout, WMSLayer } from '../components/models/message.model';
 
 @Pipe({
   name: 'filterTables',
@@ -11,6 +11,63 @@ export class FilterTablesPipe implements PipeTransform {
   transform(layouts: Layout[] | undefined | null): TableLayout[] {
     console.log('FilterTablesPipe called', layouts);
     return layouts ? layouts.filter((layout): layout is TableLayout => layout.type === 'table') : [];
+  }
+}
+@Pipe({
+  name: 'hasValidTableStructure',
+  standalone: true
+})
+export class HasValidTableStructurePipe implements PipeTransform {
+  transform(tableLayout: TableLayout): boolean {
+    if (!tableLayout?.data) return false;
+    
+    const data = tableLayout.data;
+    
+    // Check if it has required properties
+    if (!Array.isArray(data.column_names) || !Array.isArray(data.data)) {
+      return false;
+    }
+    
+    // Check if column_names is not empty
+    if (data.column_names.length === 0) {
+      return false;
+    }
+    
+    // Check if data rows have consistent column count
+    if (data.data.length > 0) {
+      const expectedCols = data.column_names.length;
+      return data.data.every(row => 
+        Array.isArray(row) && row.length === expectedCols
+      );
+    }
+    
+    return true;
+  }
+}
+
+@Pipe({
+  name: 'detectTableType',
+  standalone: true
+})
+export class DetectTableTypePipe implements PipeTransform {
+  transform(tableData: TableFormat): 'numeric' | 'text' | 'mixed' {
+    if (!tableData?.data?.length) return 'mixed';
+    
+    const sampleRow = tableData.data[0];
+    let numericCount = 0;
+    let textCount = 0;
+    
+    sampleRow.forEach((cell: string | number | boolean) => {
+      if (typeof cell === 'number') {
+        numericCount++;
+      } else if (typeof cell === 'string') {
+        textCount++;
+      }
+    });
+    
+    if (numericCount === sampleRow.length) return 'numeric';
+    if (textCount === sampleRow.length) return 'text';
+    return 'mixed';
   }
 }
 
@@ -28,21 +85,21 @@ export class FilterButtonsPipe implements PipeTransform {
 }
 
 // validation.pipe.ts
-@Pipe({
-  name: 'hasValidTableStructure',
-  pure: true,
-  standalone: true
-})
-export class HasValidTableStructurePipe implements PipeTransform {
-  transform(table: TableLayout): boolean {
-    console.log('HasValidTableStructurePipe called');
-    return table?.data && 
-           Array.isArray(table.data.column_names) && 
-           table.data.column_names.length > 0 &&
-           Array.isArray(table.data.data) &&
-           table.data.data.every((row: any) => Array.isArray(row));
-  }
-}
+// @Pipe({
+//   name: 'hasValidTableStructure',
+//   pure: true,
+//   standalone: true
+// })
+// export class HasValidTableStructurePipe implements PipeTransform {
+//   transform(table: TableLayout): boolean {
+//     console.log('HasValidTableStructurePipe called');
+//     return table?.data && 
+//            Array.isArray(table.data.column_names) && 
+//            table.data.column_names.length > 0 &&
+//            Array.isArray(table.data.data) &&
+//            table.data.data.every((row: any) => Array.isArray(row));
+//   }
+// }
 
 @Pipe({ name: 'hasValidButtonStructure', pure: true, standalone: true })
 export class HasValidButtonStructurePipe implements PipeTransform {
@@ -87,6 +144,7 @@ export class IsExternalLinkPipe implements PipeTransform {
 @Pipe({ name: 'filterMaps', pure: true, standalone: true })
 export class FilterMapsPipe implements PipeTransform {
   transform(layouts: Layout[] | undefined | null): MapLayout[] {
+        console.log('FilterMapsPipe called', layouts);
     return layouts?.filter((layout): layout is MapLayout => layout.type === 'map') || [];
   }
 }

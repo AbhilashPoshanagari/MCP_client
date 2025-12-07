@@ -1,45 +1,11 @@
 import { Injectable } from '@angular/core';
 import { OriginalTool, OpenAITool } from '../constants/toolschema';
-
+import { DynamicStructuredTool, DynamicTool } from '@langchain/core/tools';
+import { z } from 'zod/v4';
 @Injectable({
   providedIn: 'root'
 })
 export class ToolformatterService {
-
-  //   formatToolForOpenAI(originalTool: OriginalTool): OpenAITool {
-  //   const properties: { [key: string]: { type: string; description: string, } } = {};
-    
-  //   // Convert all properties to the required format
-  //   Object.entries(originalTool.inputSchema.properties).forEach(([key, value]) => {
-  //     let description: string | null = '';
-  //     if(originalTool.annotations && originalTool.annotations[key] && originalTool.annotations[key].description){
-  //       description = originalTool.annotations[key]?originalTool.annotations[key].description:null;
-  //     }
-  //     if()
-  //     properties[key] = {
-  //       type: value.type || 'object',
-  //       description: description?description: `user questions on ${originalTool.title}`
-  //     };
-  //     // console.log("properties : ", properties)
-  //   });
-
-  //   return {
-  //     type: 'function',
-  //     function: {
-  //       name: originalTool.name,
-  //       description: originalTool.description.trim(),
-  //       parameters: {
-  //         type: 'object',
-  //         properties,
-  //         required: originalTool.inputSchema.required
-  //       }
-  //     }
-  //   };
-  // }
-
-  // formatMultipleTools(tools: OriginalTool[]): OpenAITool[] {
-  //   return tools.map(tool => this.formatToolForOpenAI(tool));
-  // }
 
   formatToolForOpenAI(originalTool: OriginalTool): OpenAITool {
 
@@ -106,6 +72,87 @@ export class ToolformatterService {
   formatMultipleTools(tools: OriginalTool[]): OpenAITool[] {
     return tools.map(tool => this.formatToolForOpenAI(tool));
   }
-
   
+  /**
+   * Convert a single OriginalTool to a LangChain DynamicTool
+   */
+  convertToolForLangChain(originalTool: OriginalTool): DynamicStructuredTool {
+    // Convert JSON schema to Zod schema
+    const zodSchema = this.convertJsonSchemaToZod(originalTool.inputSchema)
+    
+    return new DynamicStructuredTool({
+      name: originalTool.name,
+      description: originalTool.description.trim(),
+      schema: zodSchema,
+      func: async (input: any) => {
+        // This is where your tool's implementation would go
+        // For now, return a placeholder
+        return `Tool ${originalTool.name} executed with input: ${JSON.stringify(input)}`
+      }
+    })
+  }
+  
+  /**
+   * Convert multiple tools to LangChain tools
+   */
+  convertMultipleTools(tools: OriginalTool[]): DynamicStructuredTool[] {
+    return tools.map(tool => this.convertToolForLangChain(tool))
+  }
+  
+  /**
+   * Recursively convert JSON schema to Zod schema
+   */
+  private convertJsonSchemaToZod(jsonSchema: any): z.ZodObject<any> {
+    const properties: Record<string, z.ZodTypeAny> = {}
+    
+    // Handle object properties
+    if (jsonSchema.type === "object" && jsonSchema.properties) {
+      for (const [propName, propSchema] of Object.entries(jsonSchema.properties)) {
+        properties[propName] = this.convertPropertyToZod(propSchema as any)
+      }
+    }
+    
+    // Create Zod object with optional required fields
+    const zodObject = z.object(properties)
+    
+    // Apply required fields if specified
+    if (jsonSchema.required && jsonSchema.required.length > 0) {
+      return zodObject.required() as z.ZodObject<any>
+    }
+    
+    return zodObject
+  }
+  
+  /**
+   * Convert a single property to Zod type
+   */
+  private convertPropertyToZod(propertySchema: any): z.ZodTypeAny {
+    const { type, description } = propertySchema
+    
+    // Handle basic types
+    switch (type) {
+      case "string":
+        return z.string().describe(description || "")
+      case "number":
+        return z.number().describe(description || "")
+      case "integer":
+        return z.number().int().describe(description || "")
+      case "boolean":
+        return z.boolean().describe(description || "")
+      case "array":
+        if (propertySchema.items) {
+          const itemType = this.convertPropertyToZod(propertySchema.items)
+          return z.array(itemType).describe(description || "")
+        }
+        return z.array(z.any()).describe(description || "")
+      case "object":
+        if (propertySchema.properties) {
+          return this.convertJsonSchemaToZod(propertySchema)
+        }
+        return z.object({}).describe(description || "")
+      default:
+        return z.any().describe(description || "")
+    }
+  }
 }
+

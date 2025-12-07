@@ -1,312 +1,357 @@
 <!-- elicitation.component.html -->
-<div *ngIf="formAvailable">
-  <div *ngIf="schema$ | async as schema; else noRequest" class="elicitation-container">
-    <div *ngIf="form$ | async as form">
-      <h2>{{ title }}</h2>
-      <p *ngIf="currentRequest?.params?.message" class="message">{{ currentRequest.params.message }}</p>
-
-      <!-- Validation Errors -->
-      <div *ngIf="validationErrors.length" class="alert alert-danger">
-        <h4>Validation Errors</h4>
-        <ul>
-          <li *ngFor="let error of validationErrors">{{ error }}</li>
-        </ul>
-      </div>
-
-      <!-- MAIN FORM -->
-      <div *ngIf="!showConfirmation">
-        <form [formGroup]="form" (ngSubmit)="onSubmit(form)" class="form-container">
-          <div class="form-fields">
-            <div *ngFor="let fieldName of getFieldNames(schema.schema)" class="form-field-group">
-              <ng-container [ngSwitch]="getFieldType(schema.schema, fieldName)">
-                
-                <!-- STRING FIELD -->
-                <div *ngSwitchCase="'string'" class="field-wrapper">
-                  <label [for]="fieldName" class="field-label">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                  
-                  <div class="field-input">
-                    <!-- Input Text -->
-                    <ng-container *ngIf="!getFieldOptions(schema.schema, fieldName).length">
-                      <input
-                        class="form-control"
-                        type="text"
-                        [id]="fieldName"
-                        [formControlName]="fieldName"
-                        [placeholder]="getFieldExamples(schema.schema, fieldName)"
-                      />
-                    </ng-container>
-
-                    <!-- Dropdown -->
-                    <ng-container *ngIf="getFieldOptions(schema.schema, fieldName).length">
-                      <select
-                        class="form-control"
-                        [id]="fieldName"
-                        [formControlName]="fieldName"
-                      >
-                        <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
-                        <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
-                          {{ option }}
-                        </option>
-                      </select>
-                    </ng-container>
-
-                    <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="field-description">
-                      {{ getFieldDescription(schema.schema, fieldName) }}
-                    </small>
-                  </div>
-                </div>
-
-                <!-- PASSWORD FIELD -->
-                <div *ngSwitchCase="'password'" class="field-wrapper">
-                  <label [for]="fieldName" class="field-label">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                  <div class="field-input">
-                    <input
-                      type="password"
-                      class="form-control"
-                      [id]="fieldName"
-                      [formControlName]="fieldName"
-                    />
-                  </div>
-                </div>
-
-                <!-- NUMBER FIELD -->
-                <div *ngSwitchCase="'number'" class="field-wrapper">
-                  <label [for]="fieldName" class="field-label">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                  <div class="field-input">
-                    <input
-                      type="number"
-                      class="form-control"
-                      [id]="fieldName"
-                      [formControlName]="fieldName"
-                      [min]="getFieldMin(schema.schema, fieldName)"
-                      [max]="getFieldMax(schema.schema, fieldName)"
-                    />
-                    <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="field-description">
-                      {{ getFieldDescription(schema.schema, fieldName) }}
-                    </small>
-                  </div>
-                </div>
-
-                <!-- INTEGER FIELD -->
-                <div *ngSwitchCase="'integer'" class="field-wrapper">
-                  <label [for]="fieldName" class="field-label">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                  <div class="field-input">
-                    <input
-                      type="number"
-                      class="form-control"
-                      [id]="fieldName"
-                      [formControlName]="fieldName"
-                    />
-                  </div>
-                </div>
-
-                <!-- ENUM SELECT FIELD -->
-                <div *ngSwitchCase="'enum'" class="field-wrapper">
-                  <label [for]="fieldName" class="field-label">
-                    {{ getFieldTitle(schema.schema, fieldName) }}
-                    <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                  </label>
-                  <div class="field-input">
-                    <select
-                      class="form-control"
-                      [id]="fieldName"
-                      [formControlName]="fieldName"
-                    >
-                      <option *ngIf="!isFieldRequired(schema.schema, fieldName)" value="">(Skip)</option>
-                      <option *ngFor="let option of getFieldOptions(schema.schema, fieldName)" [value]="option">
-                        {{ option }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-
-                <!-- BOOLEAN CHECKBOX -->
-                <div *ngSwitchCase="'boolean'" class="field-wrapper checkbox-wrapper">
-                  <div class="field-input">
-                    <label class="checkbox-label">
-                      <input
-                        type="checkbox"
-                        [id]="fieldName"
-                        [formControlName]="fieldName"
-                      />
-                      {{ getFieldTitle(schema.schema, fieldName) }}
-                      <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                    </label>
-                  </div>
-                </div>
-
-              <!-- OBJECT FIELD -->
-              <div *ngSwitchCase="'object'" class="field-wrapper">
-                <label class="field-label">
-                  {{ getFieldTitle(schema.schema, fieldName) }}
-                  <span *ngIf="isFieldRequired(schema.schema, fieldName)" class="required">*</span>
-                </label>
-                
-                <div class="field-input">
-                  <div [formArrayName]="fieldName" class="object-container">
-                    <div *ngFor="let kv of getObjectFormArray(form, fieldName).controls; let i = index" 
-                        [formGroupName]="i" class="object-item">
-                      
-                      <div class="object-inputs">
-                        <div class="input-group">
-                          <input
-                            class="form-control object-key"
-                            type="text"
-                            formControlName="key"
-                            placeholder="Key"
-                            [class.is-invalid]="getObjectItemError(fieldName, i)"
-                          />
-                        </div>
-                        
-                        <div class="input-group">
-                          <input
-                            class="form-control object-value"
-                            type="text"
-                            formControlName="value"
-                            placeholder="Value"
-                          />
-                        </div>
-                        
-                        <div class="input-group">
-                          <select class="form-control object-value-type" formControlName="valueType">
-                            <option value="string">String</option>
-                            <option value="number">Number</option>
-                            <option value="boolean">Boolean</option>
-                          </select>
-                        </div>
-                        
-                        <div class="input-group">
-                          <button 
-                            type="button" 
-                            class="btn btn-remove" 
-                            (click)="removeObjectItem(fieldName, i)"
-                            [disabled]="getObjectFormArray(form, fieldName).controls.length <= 1 && isFieldRequired(schema.schema, fieldName)"
-                            title="Remove this key/value pair"
-                          >−</button>
-                        </div>
-                      </div>
-
-                      <div *ngIf="getObjectItemError(fieldName, i)" class="error-message">
-                        {{ getObjectItemError(fieldName, i) }}
-                      </div>
-                    </div>
-
-                    <div class="object-actions">
-                      <button type="button" class="btn btn-add" (click)="addObjectItem(fieldName)">
-                        + Add Key/Value Pair
-                      </button>
-                    </div>
-                  </div>
-
-                  <small *ngIf="getFieldDescription(schema.schema, fieldName)" class="field-description">
-                    {{ getFieldDescription(schema.schema, fieldName) }}
-                  </small>
-                </div>
+@if (formAvailable) {
+  <div>
+    @if (schema$ | async; as schema) {
+      <div class="elicitation-container">
+        @if (form$ | async; as form) {
+          <div>
+            <h2>{{ title }}</h2>
+            @if (currentRequest?.params?.message) {
+              <p class="message">{{ currentRequest.params.message }}</p>
+            }
+            <!-- Validation Errors -->
+            @if (validationErrors.length) {
+              <div class="alert alert-danger">
+                <h4>Validation Errors</h4>
+                <ul>
+                  @for (error of validationErrors; track error) {
+                    <li>{{ error }}</li>
+                  }
+                </ul>
               </div>
-
-                <!-- ARRAY FIELDS -->
-                <div *ngSwitchCase="'array'" class="field-wrapper">
-                  <label class="field-label">{{ getFieldTitle(schema.schema, fieldName) }}</label>
-                  
-                  <div class="field-input">
-                    <div [formArrayName]="fieldName" class="array-container">
-                      
-                      <!-- SIMPLE ARRAY -->
-                      <div *ngIf="!isNestedArray(schema.schema, fieldName)" class="simple-array">
-                        <div *ngFor="let ctrl of getFormArray(form, fieldName).controls; let i = index" class="array-item">
-                          <div class="array-input-group">
-                            <input class="form-control" [formControlName]="i" type="text" />
-                            <button type="button" class="btn btn-remove" (click)="removeArrayItem(fieldName, i)">
-                              −
-                            </button>
-                          </div>
-                        </div>
-                        <button type="button" class="btn btn-add" (click)="addArrayItem(fieldName)">
-                          + Add Item
-                        </button>
-                      </div>
-
-                      <!-- NESTED ARRAY -->
-                      <div *ngIf="isNestedArray(schema.schema, fieldName)" class="nested-array">
-                        <div *ngFor="let row of getFormArray(form, fieldName).controls; let r = index" 
-                            [formArrayName]="r" class="nested-row">
-                          
-                          <div class="row-header">
-                            <h5>Row {{ r + 1 }}</h5>
-                            <button type="button" class="btn btn-remove" (click)="removeNestedArrayRow(fieldName, r)">
-                              Remove Row
-                            </button>
-                          </div>
-
-                          <div class="row-cells">
-                            <div *ngFor="let col of getNestedFormArray(form, fieldName, r).controls; let c = index" class="cell-item">
-                              <div class="cell-input-group">
-                                <input class="form-control" [formControlName]="c" type="text" placeholder="Cell value" />
-                                <button type="button" class="btn btn-remove" (click)="removeNestedArrayItem(fieldName, r, c)">
-                                  −
-                                </button>
+            }
+            <!-- MAIN FORM -->
+            @if (!showConfirmation) {
+              <div>
+                <form [formGroup]="form" (ngSubmit)="onSubmit(form)" class="form-container">
+                  <div class="form-fields">
+                    @for (fieldName of getFieldNames(schema.schema); track fieldName) {
+                      <div class="form-field-group">
+                        @switch (getFieldType(schema.schema, fieldName)) {
+                          <!-- STRING FIELD -->
+                          @case ('string') {
+                            <div class="field-wrapper">
+                              <label [for]="fieldName" class="field-label">
+                                {{ getFieldTitle(schema.schema, fieldName) }}
+                                @if (isFieldRequired(schema.schema, fieldName)) {
+                                  <span class="required">*</span>
+                                }
+                              </label>
+                              <div class="field-input">
+                                <!-- Input Text -->
+                                @if (!getFieldOptions(schema.schema, fieldName).length) {
+                                  <input
+                                    class="form-control"
+                                    type="text"
+                                    [id]="fieldName"
+                                    [formControlName]="fieldName"
+                                    [placeholder]="getFieldExamples(schema.schema, fieldName)"
+                                    />
+                                  }
+                                  <!-- Dropdown -->
+                                  @if (getFieldOptions(schema.schema, fieldName).length) {
+                                    <select
+                                      class="form-control"
+                                      [id]="fieldName"
+                                      [formControlName]="fieldName"
+                                      >
+                                      @if (!isFieldRequired(schema.schema, fieldName)) {
+                                        <option value="">(Skip)</option>
+                                      }
+                                      @for (option of getFieldOptions(schema.schema, fieldName); track option) {
+                                        <option [value]="option">
+                                          {{ option }}
+                                        </option>
+                                      }
+                                    </select>
+                                  }
+                                  @if (getFieldDescription(schema.schema, fieldName)) {
+                                    <small class="field-description">
+                                      {{ getFieldDescription(schema.schema, fieldName) }}
+                                    </small>
+                                  }
+                                </div>
+                              </div>
+                            }
+                            <!-- PASSWORD FIELD -->
+                            @case ('password') {
+                              <div class="field-wrapper">
+                                <label [for]="fieldName" class="field-label">
+                                  {{ getFieldTitle(schema.schema, fieldName) }}
+                                  @if (isFieldRequired(schema.schema, fieldName)) {
+                                    <span class="required">*</span>
+                                  }
+                                </label>
+                                <div class="field-input">
+                                  <input
+                                    type="password"
+                                    class="form-control"
+                                    [id]="fieldName"
+                                    [formControlName]="fieldName"
+                                    />
+                                  </div>
+                                </div>
+                              }
+                              <!-- NUMBER FIELD -->
+                              @case ('number') {
+                                <div class="field-wrapper">
+                                  <label [for]="fieldName" class="field-label">
+                                    {{ getFieldTitle(schema.schema, fieldName) }}
+                                    @if (isFieldRequired(schema.schema, fieldName)) {
+                                      <span class="required">*</span>
+                                    }
+                                  </label>
+                                  <div class="field-input">
+                                    <input
+                                      type="number"
+                                      class="form-control"
+                                      [id]="fieldName"
+                                      [formControlName]="fieldName"
+                                      [min]="getFieldMin(schema.schema, fieldName)"
+                                      [max]="getFieldMax(schema.schema, fieldName)"
+                                      />
+                                      @if (getFieldDescription(schema.schema, fieldName)) {
+                                        <small class="field-description">
+                                          {{ getFieldDescription(schema.schema, fieldName) }}
+                                        </small>
+                                      }
+                                    </div>
+                                  </div>
+                                }
+                                <!-- INTEGER FIELD -->
+                                @case ('integer') {
+                                  <div class="field-wrapper">
+                                    <label [for]="fieldName" class="field-label">
+                                      {{ getFieldTitle(schema.schema, fieldName) }}
+                                      @if (isFieldRequired(schema.schema, fieldName)) {
+                                        <span class="required">*</span>
+                                      }
+                                    </label>
+                                    <div class="field-input">
+                                      <input
+                                        type="number"
+                                        class="form-control"
+                                        [id]="fieldName"
+                                        [formControlName]="fieldName"
+                                        />
+                                      </div>
+                                    </div>
+                                  }
+                                  <!-- ENUM SELECT FIELD -->
+                                  @case ('enum') {
+                                    <div class="field-wrapper">
+                                      <label [for]="fieldName" class="field-label">
+                                        {{ getFieldTitle(schema.schema, fieldName) }}
+                                        @if (isFieldRequired(schema.schema, fieldName)) {
+                                          <span class="required">*</span>
+                                        }
+                                      </label>
+                                      <div class="field-input">
+                                        <select
+                                          class="form-control"
+                                          [id]="fieldName"
+                                          [formControlName]="fieldName"
+                                          >
+                                          @if (!isFieldRequired(schema.schema, fieldName)) {
+                                            <option value="">(Skip)</option>
+                                          }
+                                          @for (option of getFieldOptions(schema.schema, fieldName); track option) {
+                                            <option [value]="option">
+                                              {{ option }}
+                                            </option>
+                                          }
+                                        </select>
+                                      </div>
+                                    </div>
+                                  }
+                                  <!-- BOOLEAN CHECKBOX -->
+                                  @case ('boolean') {
+                                    <div class="field-wrapper checkbox-wrapper">
+                                      <div class="field-input">
+                                        <label class="checkbox-label">
+                                          <input
+                                            type="checkbox"
+                                            [id]="fieldName"
+                                            [formControlName]="fieldName"
+                                            />
+                                            {{ getFieldTitle(schema.schema, fieldName) }}
+                                            @if (isFieldRequired(schema.schema, fieldName)) {
+                                              <span class="required">*</span>
+                                            }
+                                          </label>
+                                        </div>
+                                      </div>
+                                    }
+                                    <!-- OBJECT FIELD -->
+                                    @case ('object') {
+                                      <div class="field-wrapper">
+                                        <label class="field-label">
+                                          {{ getFieldTitle(schema.schema, fieldName) }}
+                                          @if (isFieldRequired(schema.schema, fieldName)) {
+                                            <span class="required">*</span>
+                                          }
+                                        </label>
+                                        <div class="field-input">
+                                          <div [formArrayName]="fieldName" class="object-container">
+                                            @for (kv of getObjectFormArray(form, fieldName).controls; track kv; let i = $index) {
+                                              <div
+                                                [formGroupName]="i" class="object-item">
+                                                <div class="object-inputs">
+                                                  <div class="input-group">
+                                                    <input
+                                                      class="form-control object-key"
+                                                      type="text"
+                                                      formControlName="key"
+                                                      placeholder="Key"
+                                                      [class.is-invalid]="getObjectItemError(fieldName, i)"
+                                                      />
+                                                    </div>
+                                                    <div class="input-group">
+                                                      <input
+                                                        class="form-control object-value"
+                                                        type="text"
+                                                        formControlName="value"
+                                                        placeholder="Value"
+                                                        />
+                                                      </div>
+                                                      <div class="input-group">
+                                                        <select class="form-control object-value-type" formControlName="valueType">
+                                                          <option value="string">String</option>
+                                                          <option value="number">Number</option>
+                                                          <option value="boolean">Boolean</option>
+                                                        </select>
+                                                      </div>
+                                                      <div class="input-group">
+                                                        <button
+                                                          type="button"
+                                                          class="btn btn-remove"
+                                                          (click)="removeObjectItem(fieldName, i)"
+                                                          [disabled]="getObjectFormArray(form, fieldName).controls.length <= 1 && isFieldRequired(schema.schema, fieldName)"
+                                                          title="Remove this key/value pair"
+                                                        >−</button>
+                                                      </div>
+                                                    </div>
+                                                    @if (getObjectItemError(fieldName, i)) {
+                                                      <div class="error-message">
+                                                        {{ getObjectItemError(fieldName, i) }}
+                                                      </div>
+                                                    }
+                                                  </div>
+                                                }
+                                                <div class="object-actions">
+                                                  <button type="button" class="btn btn-add" (click)="addObjectItem(fieldName)">
+                                                    + Add Key/Value Pair
+                                                  </button>
+                                                </div>
+                                              </div>
+                                              @if (getFieldDescription(schema.schema, fieldName)) {
+                                                <small class="field-description">
+                                                  {{ getFieldDescription(schema.schema, fieldName) }}
+                                                </small>
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+                                        <!-- ARRAY FIELDS -->
+                                        @case ('array') {
+                                          <div class="field-wrapper">
+                                            <label class="field-label">{{ getFieldTitle(schema.schema, fieldName) }}</label>
+                                            <div class="field-input">
+                                              <div [formArrayName]="fieldName" class="array-container">
+                                                <!-- SIMPLE ARRAY -->
+                                                @if (!isNestedArray(schema.schema, fieldName)) {
+                                                  <div class="simple-array">
+                                                    @for (ctrl of getFormArray(form, fieldName).controls; track ctrl; let i = $index) {
+                                                      <div class="array-item">
+                                                        <div class="array-input-group">
+                                                          <input class="form-control" [formControlName]="i" type="text" />
+                                                          <button type="button" class="btn btn-remove" (click)="removeArrayItem(fieldName, i)">
+                                                            −
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    }
+                                                    <button type="button" class="btn btn-add" (click)="addArrayItem(fieldName)">
+                                                      + Add Item
+                                                    </button>
+                                                  </div>
+                                                }
+                                                <!-- NESTED ARRAY -->
+                                                @if (isNestedArray(schema.schema, fieldName)) {
+                                                  <div class="nested-array">
+                                                    @for (row of getFormArray(form, fieldName).controls; track row; let r = $index) {
+                                                      <div
+                                                        [formArrayName]="r" class="nested-row">
+                                                        <div class="row-header">
+                                                          <h5>Row {{ r + 1 }}</h5>
+                                                          <button type="button" class="btn btn-remove" (click)="removeNestedArrayRow(fieldName, r)">
+                                                            Remove Row
+                                                          </button>
+                                                        </div>
+                                                        <div class="row-cells">
+                                                          @for (col of getNestedFormArray(form, fieldName, r).controls; track col; let c = $index) {
+                                                            <div class="cell-item">
+                                                              <div class="cell-input-group">
+                                                                <input class="form-control" [formControlName]="c" type="text" placeholder="Cell value" />
+                                                                <button type="button" class="btn btn-remove" (click)="removeNestedArrayItem(fieldName, r, c)">
+                                                                  −
+                                                                </button>
+                                                              </div>
+                                                            </div>
+                                                          }
+                                                        </div>
+                                                        <button type="button" class="btn btn-add" (click)="addNestedArrayItem(fieldName, r)">
+                                                          + Add Cell
+                                                        </button>
+                                                      </div>
+                                                    }
+                                                    <button type="button" class="btn btn-primary" (click)="addNestedArrayRow(fieldName)">
+                                                      + Add Row
+                                                    </button>
+                                                  </div>
+                                                }
+                                              </div>
+                                            </div>
+                                          </div>
+                                        }
+                                      }
+                                    </div>
+                                  }
+                                </div>
+                                <div class="form-actions">
+                                  <button type="submit" class="btn btn-primary" [disabled]="waitingForResponse">
+                                    Submit
+                                  </button>
+                                  <button type="button" class="btn btn-secondary" (click)="cancel()">
+                                    Cancel
+                                  </button>
+                                </div>
+                                @if (waitingForResponse) {
+                                  <div class="loading-spinner">
+                                    <img src="gif/Spinner.gif" alt="Loading..." />
+                                  </div>
+                                }
+                              </form>
+                            </div>
+                          }
+                          <!-- CONFIRMATION SCREEN -->
+                          @if (showConfirmation) {
+                            <div class="confirmation-dialog">
+                              <h3>Confirm Submission</h3>
+                              <pre>{{ maskSensitiveData(submittedData) | json }}</pre>
+                              <div class="confirmation-actions">
+                                <button class="btn btn-success" (click)="confirmSubmission(true)">Confirm</button>
+                                <button class="btn btn-warning" (click)="onEdit()">Edit</button>
+                                <button class="btn btn-danger" (click)="confirmSubmission(false)">Cancel</button>
                               </div>
                             </div>
-                          </div>
-                          
-                          <button type="button" class="btn btn-add" (click)="addNestedArrayItem(fieldName, r)">
-                            + Add Cell
-                          </button>
+                          }
                         </div>
-                        
-                        <button type="button" class="btn btn-primary" (click)="addNestedArrayRow(fieldName)">
-                          + Add Row
-                        </button>
-                      </div>
+                      }
                     </div>
-                  </div>
+                  } @else {
+                    <p class="no-request">No active elicitation request</p>
+                  }
                 </div>
+              }
 
-              </ng-container>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn btn-primary" [disabled]="waitingForResponse">
-              Submit
-            </button>
-            <button type="button" class="btn btn-secondary" (click)="cancel()">
-              Cancel
-            </button>
-          </div>
-
-          <div *ngIf="waitingForResponse" class="loading-spinner">
-            <img src="gif/Spinner.gif" alt="Loading..." />
-          </div>
-        </form>
-      </div>
-
-      <!-- CONFIRMATION SCREEN -->
-      <div *ngIf="showConfirmation" class="confirmation-dialog">
-        <h3>Confirm Submission</h3>
-        <pre>{{ maskSensitiveData(submittedData) | json }}</pre>
-        <div class="confirmation-actions">
-          <button class="btn btn-success" (click)="confirmSubmission(true)">Confirm</button>
-          <button class="btn btn-warning" (click)="onEdit()">Edit</button>
-          <button class="btn btn-danger" (click)="confirmSubmission(false)">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<ng-template #noRequest>
-  <p class="no-request">No active elicitation request</p>
-</ng-template>

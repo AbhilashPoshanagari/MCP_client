@@ -1,12 +1,12 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { Layout, KanbanBoardData, KanbanCard } from '../models/message.model';
 import { KanbanBoardComponent } from '../kanban-board/kanban-board.component';
 @Component({
   selector: 'app-chat-kanban',
-  imports: [CommonModule, FormsModule, DragDropModule, KanbanBoardComponent],
+  imports: [FormsModule, DragDropModule, KanbanBoardComponent],
   templateUrl: './chat-kanban.component.html',
   styleUrl: './chat-kanban.component.css',
 })

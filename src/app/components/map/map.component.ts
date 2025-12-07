@@ -42,6 +42,7 @@ export class MapComponent implements OnInit, OnChanges, AfterViewInit {
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['featureDetails'] && this.map) {
+      console.log("Features : ", changes['featureDetails']);
       this.updateFeatures();
     }
     if (changes['geoJsonData'] && this.map) {

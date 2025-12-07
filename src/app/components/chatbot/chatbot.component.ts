@@ -36,6 +36,8 @@ import { ChatFormComponent } from '../chat-form/chat-form.component';
 import { KanbanBoardComponent } from '../kanban-board/kanban-board.component';
 import { ChatKanbanComponent } from '../chat-kanban/chat-kanban.component';
 import { FilterKanbanPipe, IsKanbanLayoutPipe } from '../../custom-pipes/kanban-board.pipe';
+import { ChatDataTableComponent } from '../chat-data-table/chat-data-table.component';
+
 @Component({
   selector: 'app-chatbot',
   imports: [FormsModule, CommonModule, MarkdownModule, MapComponent,
@@ -53,6 +55,7 @@ import { FilterKanbanPipe, IsKanbanLayoutPipe } from '../../custom-pipes/kanban-
     FilterFormsPipe, 
     IsValidFormLayoutPipe,
     ChatFormComponent,
+    ChatDataTableComponent,
     ChatKanbanComponent,
     FilterKanbanPipe,
     IsKanbanLayoutPipe

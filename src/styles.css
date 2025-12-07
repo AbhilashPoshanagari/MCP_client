@@ -5,6 +5,12 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   background-color: #eee;
   border-radius: 10px;
 }
+/* styles.scss 或 app.component.scss */
+:root {
+  --ag-row-height: 48px;
+  --ag-header-height: 56px;
+  --ag-list-item-height: 32px;
+}
 
 /* Wrap long lines inside code blocks rendered by ngx-markdown */
 .markdown-body pre {
@@ -29,35 +35,68 @@ code {
 }
 /* You can add global styles to this file, and also import other style files
 
-.container {
-  display: flex;
-  height: 100vh;
+/* Add to global styles.css or component styles */
+.ag-theme-chatbot {
+  --ag-background-color: #ffffff;
+  --ag-border-color: #e2e8f0;
+  --ag-header-background-color: #f8fafc;
+  --ag-odd-row-background-color: #fafafa;
+  --ag-header-column-separator-color: #e2e8f0;
+  --ag-row-border-color: #f1f5f9;
+  --ag-row-hover-color: #f8fafc;
+  --ag-font-size: 14px;
+  --ag-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
-.sidebar {
-  width: 300px;
-  background: #f3f3f3;
-  padding: 10px;
-  border-right: 1px solid #ccc;
+
+/* Custom cell renderer styles */
+.boolean-true {
+  color: #10b981;
+  font-weight: bold;
 }
-.chat-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+
+.boolean-false {
+  color: #ef4444;
+  font-weight: bold;
 }
-.chat-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 15px;
+
+.number-value {
+  color: #3b82f6;
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-weight: 500;
 }
-form {
-  display: flex;
-  padding: 10px;
-  border-top: 1px solid #ccc;
+
+.text-value {
+  color: #1f2937;
 }
-input {
-  flex: 1;
-  padding: 10px;
+
+.null-value {
+  color: #9ca3af;
+  font-style: italic;
 }
-button {
-  margin-left: 10px;
-} */
+
+.example-wrapper {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    flex: 1 1;
+    gap: 50px;
+}
+.inner-col,
+ag-grid-angular {
+    width: 100%;
+    height: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .chat-table-container {
+    margin: 12px -16px;
+    border-radius: 0;
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .ag-theme-chatbot {
+    --ag-font-size: 13px;
+  }
+}

@@ -1,0 +1,87 @@
+    <!-- <div class="chat-table-container">
+      @if (tableData.table_name) {
+        <div class="table-title">{{ tableData.table_name }}</div>
+      }
+      
+        <ag-grid-angular
+          #agGrid
+          [rowData]="rowData"
+          [theme]="theme"
+          [rowSelection]="rowSelection"
+          [columnDefs]="columnDefs"
+          [defaultColDef]="defaultColDef"
+          [gridOptions]="gridOptions"
+          (gridReady)="onGridReady($event)"
+          style="height: 400px; width: 100%;"
+        />
+      
+      <div class="table-info">
+        <span class="info-item">{{ rowData.length || 0 }} rows</span>
+        <span class="info-item">{{ columnDefs.length || 0 }} columns</span>
+      </div>
+    </div> -->
+
+    <!-- chat-data-table.component.html -->
+<div class="table-container">
+  <!-- Toolbar -->
+  <div class="grid-toolbar" *ngIf="tableData">
+    <div class="toolbar-left">
+      <h3 class="table-title">{{ tableData.table_name || 'Data Table' }}</h3>
+      <div class="stats-badge">
+        <span *ngIf="getGridApi()">
+          {{ getFilteredRows() }} of {{ getTotalRows() }} rows
+        </span>
+        <span *ngIf="!getGridApi()">
+          {{ getTotalRows() }} rows
+        </span>
+      </div>
+    </div>
+    
+    <div class="toolbar-right">
+      <button class="action-button" (click)="clearFilters()" title="Clear Filters">
+        <span class="material-icons">filter_alt_off</span>
+        <span>Clear Filters</span>
+      </button>
+      
+      <button class="action-button" (click)="clearSorting()" title="Clear Sorting">
+        <span class="material-icons">sort</span>
+        <span>Clear Sort</span>
+      </button>
+      
+      <button class="action-button primary" (click)="exportToCsv()" title="Export to CSV">
+        <span class="material-icons">download</span>
+        <span>Export CSV</span>
+      </button>
+      
+      <!-- <button class="action-button success" *ngIf="gridApi?.exportDataAsExcel" 
+              (click)="exportToExcel()" title="Export to Excel">
+        <span class="material-icons">table_chart</span>
+        <span>Export Excel</span>
+      </button> -->
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <ag-grid-angular
+    style="width: 100%; height: 500px;"
+    class="ag-theme-quartz custom-ag-theme"
+    [rowData]="rowData"
+    [columnDefs]="columnDefs"
+    [gridOptions]="gridOptions"
+    [defaultColDef]="defaultColDef"
+    [rowSelection]="rowSelection"
+    [pagination]="rowData.length > 10"
+    [paginationPageSize]="10"
+    [paginationPageSizeSelector]="[5, 10, 25, 50, 100]"
+    [animateRows]="true"
+    (gridReady)="onGridReady($event)">
+  </ag-grid-angular>
+
+  <!-- Footer -->
+  <div class="grid-footer" *ngIf="tableData">
+    <div class="footer-info">
+      <span class="material-icons info-icon">info</span>
+      <span>Click column headers to sort, use floating filters to search, and hover over cells for full content.</span>
+    </div>
+  </div>
+</div>

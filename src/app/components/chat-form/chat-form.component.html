@@ -1,44 +1,51 @@
 <div class="chat-form-container">
-      <!-- Form Header -->
-      <div class="form-header">
-        <h3 class="form-title">{{ formLayout.data.title | titlecase}}</h3>
-        <div class="form-actions-top">
-          <button 
-            *ngIf="formLayout.data.metadata" 
-            class="btn btn-info btn-sm"
-            (click)="toggleMetadata()"
-            title="Show form information"
+  <!-- Form Header -->
+  <div class="form-header">
+    <h3 class="form-title">{{ formLayout.data.title | titlecase}}</h3>
+    <div class="form-actions-top">
+      @if (formLayout.data.metadata) {
+        <button
+          class="btn btn-info btn-sm"
+          (click)="toggleMetadata()"
+          title="Show form information"
           >
-            ℹ️
-          </button>
-        </div>
-      </div>
+          ℹ️
+        </button>
+      }
+    </div>
+  </div>
 
-        <!-- Submission Status Banner -->
-      <div *ngIf="isSubmitted" class="submission-banner success">
-        ✓ Form submitted successfully
-      </div>
+  <!-- Submission Status Banner -->
+  @if (isSubmitted) {
+    <div class="submission-banner success">
+      ✓ Form submitted successfully
+    </div>
+  }
 
-      <!-- Metadata Panel -->
-      <div *ngIf="showMetadata && formLayout.data.metadata" class="metadata-panel">
-        <div class="metadata-content">
-          <h4>Form Information</h4>
-          <div class="metadata-item" *ngFor="let item of getMetadataEntries(formLayout.data.metadata)">
+  <!-- Metadata Panel -->
+  @if (showMetadata && formLayout.data.metadata) {
+    <div class="metadata-panel">
+      <div class="metadata-content">
+        <h4>Form Information</h4>
+        @for (item of getMetadataEntries(formLayout.data.metadata); track item) {
+          <div class="metadata-item">
             <strong>{{ item.key | titlecase }}:</strong> {{ item.value }}
           </div>
-        </div>
+        }
       </div>
+    </div>
+  }
 
-      <!-- Dynamic Form Content -->
-      <div class="form-content">
-        <form [formGroup]="form" (ngSubmit)="onSubmit()" class="dynamic-form">
-          <!-- Dynamic form fields will be generated here based on schema -->
-          <div *ngFor="let field of formFields" class="form-field">
-            <label [for]="field.key" [class.required]="field.required">{{ field.title }}</label>
-            
-            <!-- Text Input -->
+  <!-- Dynamic Form Content -->
+  <div class="form-content">
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="dynamic-form">
+      <!-- Dynamic form fields will be generated here based on schema -->
+      @for (field of formFields; track field) {
+        <div class="form-field">
+          <label [for]="field.key" [class.required]="field.required">{{ field.title }}</label>
+          <!-- Text Input -->
+          @if (field.type === 'string' && field.widgetType !== 'textArea') {
             <input
-              *ngIf="field.type === 'string' && field.widgetType !== 'textArea'"
               [id]="field.key"
               type="text"
               [formControlName]="field.key"
@@ -46,11 +53,11 @@
               class="form-control"
               [class.readonly]="isSubmitted"
               [readonly]="isSubmitted"
-            />
-
-            <!-- Text Area -->
+              />
+          }
+          <!-- Text Area -->
+          @if (field.widgetType === 'textArea') {
             <textarea
-              *ngIf="field.widgetType === 'textArea'"
               [id]="field.key"
               [formControlName]="field.key"
               [placeholder]="field.placeholder"
@@ -59,10 +66,10 @@
               [class.readonly]="isSubmitted"
               [readonly]="isSubmitted"
             ></textarea>
-
-            <!-- Number Input -->
+          }
+          <!-- Number Input -->
+          @if (field.type === 'number') {
             <input
-              *ngIf="field.type === 'number'"
               [id]="field.key"
               type="number"
               [formControlName]="field.key"
@@ -70,62 +77,72 @@
               class="form-control"
               [class.readonly]="isSubmitted"
               [readonly]="isSubmitted"
-            />
-
-            <!-- Select Dropdown -->
+              />
+          }
+          <!-- Select Dropdown -->
+          @if (field.widgetType === 'select' && field.options) {
             <select
-              *ngIf="field.widgetType === 'select' && field.options"
               [id]="field.key"
               [formControlName]="field.key"
               class="form-control"
-            >
+              >
               <option value="">Select {{ field.title }}</option>
-              <option *ngFor="let option of field.options" [value]="option.value">
-                {{ option.displayValue || option.value }}
-              </option>
+              @for (option of field.options; track option) {
+                <option [value]="option.value">
+                  {{ option.displayValue || option.value }}
+                </option>
+              }
             </select>
-
-            <!-- Boolean Checkbox -->
-            <div *ngIf="field.type === 'boolean'" class="checkbox-wrapper">
+          }
+          <!-- Boolean Checkbox -->
+          @if (field.type === 'boolean') {
+            <div class="checkbox-wrapper">
               <label>
                 <input type="checkbox" [formControlName]="field.key" [disabled]="isSubmitted"/>
                 {{ field.title }}
               </label>
             </div>
-
-            <!-- Validation Errors -->
-            <div *ngIf="form.get(field.key)?.invalid && form.get(field.key)?.touched && !isSubmitted" class="error-message">
-              <div *ngIf="form.get(field.key)?.errors?.['required']">This field is required</div>
-              <div *ngIf="form.get(field.key)?.errors?.['email']">Invalid email format</div>
+          }
+          <!-- Validation Errors -->
+          @if (form.get(field.key)?.invalid && form.get(field.key)?.touched && !isSubmitted) {
+            <div class="error-message">
+              @if (form.get(field.key)?.errors?.['required']) {
+                <div>This field is required</div>
+              }
+              @if (form.get(field.key)?.errors?.['email']) {
+                <div>Invalid email format</div>
+              }
             </div>
-          </div>
+          }
+        </div>
+      }
 
-          <!-- Form Actions -->
-          <div class="form-actions">
-            <button type="button" (click)="onCancel()" class="btn btn-secondary" [disabled]="isSubmitted">Cancel</button>
-            <button type="submit" [disabled]="isSubmitting || isSubmitted || form.invalid" class="btn btn-primary">
-              {{ isSubmitting ? 'Submitting...' : 'Submit' }}
-            </button>
-          </div>
-        </form>
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button type="button" (click)="onCancel()" class="btn btn-secondary" [disabled]="isSubmitted">Cancel</button>
+        <button type="submit" [disabled]="isSubmitting || isSubmitted || form.invalid" class="btn btn-primary">
+          {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+        </button>
       </div>
+    </form>
+  </div>
 
-      <!-- Action Buttons -->
-      <!-- <div class="form-actions-bottom">
-        <button 
-          type="submit" 
-          class="btn btn-primary" 
-          (click)="onSubmit()"
-          [disabled]="form.invalid || isSubmitting"
-        >
-          {{ isSubmitting ? 'Submitting...' : (formLayout.data.actions.submit.title || 'Submit') }}
-        </button>
-        <button 
-          type="button" 
-          class="btn btn-secondary" 
-          (click)="onCancel()"
-        >
-          {{ formLayout.data.actions.cancel.title || 'Cancel' }}
-        </button>
-      </div> -->
-    </div>
+  <!-- Action Buttons -->
+  <!-- <div class="form-actions-bottom">
+  <button
+    type="submit"
+    class="btn btn-primary"
+    (click)="onSubmit()"
+    [disabled]="form.invalid || isSubmitting"
+    >
+    {{ isSubmitting ? 'Submitting...' : (formLayout.data.actions.submit.title || 'Submit') }}
+  </button>
+  <button
+    type="button"
+    class="btn btn-secondary"
+    (click)="onCancel()"
+    >
+    {{ formLayout.data.actions.cancel.title || 'Cancel' }}
+  </button>
+</div> -->
+</div>

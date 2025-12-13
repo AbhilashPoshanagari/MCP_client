@@ -3,9 +3,15 @@
 
   <div class="input-container">
     <label class="input-label">{{data.message}}</label>
+    <!-- <input matInput class="input-field" [(ngModel)]="server" type="text" [placeholder]="data.placeholder"> -->
+    @if(data.page === 'open_ai_token'){
+    <input matInput class="input-field" [(ngModel)]="server" type="password" [placeholder]="data.placeholder">
+  } @else {
     <input matInput class="input-field" [(ngModel)]="server" type="text" [placeholder]="data.placeholder">
+  }
+
   </div>
-  @if (server) {
+  @if (data.page != 'open_ai_token' && server) {
     <p class="error-message"> {{server}}</p>
   }
   @if (errorMessage) {
@@ -17,15 +23,5 @@
     <button class="save-btn" (click)="saveDomain()">{{data.confirmText}}</button>
   </div>
 </div>
-
-<!-- <div class="dialog-container">
-<mat-form-field appearance="outline">
-  <mat-label>Connect to server</mat-label>
-  <input matInput [(ngModel)]="server" placeholder="Enter domain name">
-</mat-form-field>
-<p *ngIf="server" class="error-message"> {{server}}</p>
-<p *ngIf="errorMessage">{{errorMessage}}</p>
-<button mat-button (click)="saveDomain()" color="primary">Save</button>
-</div> -->
 
 

@@ -80,7 +80,7 @@
               />
           }
           <!-- Select Dropdown -->
-          @if (field.widgetType === 'select' && field.options) {
+          @if ((field.widgetType === 'select' || 'dropdown') && field.options) {
             <select
               [id]="field.key"
               [formControlName]="field.key"

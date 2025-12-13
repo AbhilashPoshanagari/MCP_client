@@ -39,18 +39,18 @@ export class ChatKanbanComponent {
   
   onBoardUpdated(updatedBoard: KanbanBoardData) {
     console.log('Kanban board updated:', updatedBoard);
-    this.isLoading = true;
+    // this.isLoading = true;
     
-    // Emit the update to parent component
-    this.boardUpdated.emit({
-      type: 'kanban_update',
-      layout: this.kanbanLayout,
-      data: updatedBoard
-    });
+    // // Emit the update to parent component
+    // this.boardUpdated.emit({
+    //   type: 'kanban_update',
+    //   layout: this.kanbanLayout,
+    //   data: updatedBoard
+    // });
     
-    // Simulate API call completion
-    setTimeout(() => {
-      this.isLoading = false;
-    }, 500);
+    // // Simulate API call completion
+    // setTimeout(() => {
+    //   this.isLoading = false;
+    // }, 500);
   }
 }

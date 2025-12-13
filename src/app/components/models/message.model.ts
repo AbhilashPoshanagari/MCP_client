@@ -89,17 +89,17 @@ export interface WMSLayer {
 // -------------------
 // ENUMS
 // -------------------
-export enum WidgetType {
-  TEXTBOX = "textBox",
-  STATUS = "status",
-  DROPDOWN = "dropdown",
-  CHECKBOX = "checkbox",
-  RADIO = "radio",
-  TEXTAREA = "textarea",
-  NUMBER = "number",
-  DATE = "date",
-  EMAIL = "email"
-}
+// export enum WidgetType {
+//   TEXTBOX = "textBox",
+//   STATUS = "status",
+//   DROPDOWN = "dropdown",
+//   CHECKBOX = "checkbox",
+//   RADIO = "radio",
+//   TEXTAREA = "textarea",
+//   NUMBER = "number",
+//   DATE = "date",
+//   EMAIL = "email"
+// }
 
 // -------------------
 // OPTION MODEL
@@ -192,6 +192,82 @@ export interface FormLayout extends Layout {
     actions: FormActions;
   };
 }
+
+// models/form.models.ts
+export enum WidgetType {
+  TEXTBOX = "textBox",
+  STATUS = "status",
+  DROPDOWN = "dropdown",
+  SELECT = "select",
+  CHECKBOX = "checkbox",
+  RADIO = "radio",
+  TEXTAREA = "textArea",
+  NUMBER = "number",
+  DATE = "date",
+  EMAIL = "email"
+}
+
+// Option model
+export interface Option {
+  displayValue: string;
+  value: string;
+  dependFields?: any;
+}
+
+// FormWidget model
+export interface FormWidget {
+  _id: string;
+  id: string;
+  label: string;
+  isRequired: boolean | string;
+  placeholder: string;
+  defaultValue: string;
+  minLength?: string | number | null;
+  maxLength?: string | number | null;
+  type: WidgetType;
+  isUnderHeading: string;
+  isDependentField: boolean;
+  disabled: string;
+  displayName: string;
+  typeChange: string;
+  dynamicDropdownTable: string;
+  columnName: string;
+  formId: string;
+  position: number;
+  __v: number;
+  options?: Option[];
+  isReassign?: boolean;
+}
+
+// FormInfo model
+export interface FormInfo {
+  _id: string;
+  name: string;
+  createdBy: string;
+  description: string;
+  version: string;
+  dependentFields: any[];
+  displayField: any[];
+  
+  // If you're using alias for _id
+  id: string; // For mapping _id to id if needed
+}
+
+// FormData model
+export interface FormData {
+  formWidgets: FormWidget[];
+  isCurrentVersion: boolean;
+  formInfo: FormInfo;
+  referenceList: any[];
+  recordInformation: any[];
+  actions?: {
+    submit: { label: string; type: string };
+    cancel: { label: string; type: string };
+    delete?: { label: string; type: string; style?: string };
+  };
+}
+
+// FormLayout model
 
 export interface KanbanCard {
   id: string;

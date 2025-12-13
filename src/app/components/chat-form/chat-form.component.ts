@@ -68,11 +68,19 @@ export class ChatFormComponent {
         }
 
         // Handle different field types for default values
-        let defaultValue: string | boolean | number | null = '';
-        if (field.type === 'number') {
-          defaultValue = null;
-        } else if (field.type === 'boolean') {
-          defaultValue = false;
+        // let defaultValue: string | boolean | number | null = '';
+        // if (field.type === 'number') {
+        //   defaultValue = null;
+        // } else if (field.type === 'boolean') {
+        //   defaultValue = false;
+        // }
+
+        let defaultValue = fieldConfig.defaultValue;
+
+        if (defaultValue === undefined || defaultValue === null) {
+          if (field.type === 'number') defaultValue = null;
+          else if (field.type === 'boolean') defaultValue = false;
+          else defaultValue = '';
         }
 
         formGroupConfig[field.key] = [defaultValue, validators];

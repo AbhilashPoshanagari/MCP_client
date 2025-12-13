@@ -112,9 +112,10 @@
         <!-- Cards Container -->
         <div class="cards-container"
           cdkDropList
+          [id]="'cdk-drop-list-' + column.id"
           [cdkDropListData]="column.cards"
           [cdkDropListConnectedTo]="getConnectedLists()"
-          (cdkDropListDropped)="drop($event, column.id)">
+          (cdkDropListDropped)="drop($event)">
           <!-- Cards -->
           @for (card of column.cards; track card) {
             <div
@@ -355,4 +356,29 @@
       </ul>
     </div>
   }
+
+  <!-- Add this to your kanban-board.component.html, right before the closing div -->
+
+<!-- Form Modal -->
+@if (showForm && formLayout) {
+  <div class="modal-overlay form-modal" (click)="closeForm()">
+    <div class="modal-content form-modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{ formLayout.data.title }}</h3>
+        <button class="btn-close" (click)="closeForm()">
+          <i class="icon-close"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <app-chat-form
+          [formLayout]="formLayout"
+          (formSubmitted)="handleFormSubmitted($event)"
+          (formCancelled)="handleFormCancelled()"
+          (kanbanAction)="handleKanbanAction($event)"
+          (kanbanBoardUpdated)="handleKanbanBoardUpdated($event)">
+        </app-chat-form>
+      </div>
+    </div>
+  </div>
+}
 </div>

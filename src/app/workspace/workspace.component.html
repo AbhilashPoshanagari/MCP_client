@@ -1,0 +1,84 @@
+<div class="workspace-container">
+  <div class="workspace-header">
+    <h3 class="workspace-title">
+      @if (layout) {
+        {{ getLayoutTitle() }}
+      }
+    </h3>
+    <button mat-icon-button (click)="closeLayout()" class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  
+  <div class="workspace-content">
+    <!-- Display selected layout based on type -->
+    @if (layout) {
+      @switch (getLayoutType()) {
+        @case ('map') {
+        @if (layout | isValidMapLayout) {
+
+          <div class="workspace-map">
+            @if (layout | hasMapTitle) {
+            <div class="map-header">{{ layout | getMapTitle }}</div>
+            }
+            <app-map
+            [featureDetails]="layout | getMapFeatures"
+            [wmsLayers]="layout | getMapWmsLayers"
+            [center]="layout | getMapCenter"
+            [zoom]="layout | getMapZoom"
+            [showPopup]="true"
+            [height]="layout | getMapHeight"
+            (featureClick)="onFeatureClick($event)">
+            </app-map>
+          </div>
+          } @else {
+            <div class="map-error">Invalid map layout</div>
+        }
+        }
+        
+        @case ('table') {
+          <div class="workspace-table">
+            @if (layout | hasValidTableStructure) {
+                <app-chat-data-table [tableData]="layout.data" />
+                } @else {
+                <div class="table-error">
+                    <i class="error-icon">⚠️</i>
+                    Invalid table structure
+                </div>
+                }
+          </div>
+        }
+        
+        @case ('kanban') {
+          <div class="workspace-kanban">
+            <app-chat-kanban
+              [kanbanLayout]="layout"
+              (actionTriggered)="onKanbanAction($event)"
+              (boardUpdated)="onKanbanBoardUpdated($event)">
+            </app-chat-kanban>
+          </div>
+        }
+        
+        @case ('form') {
+          <div class="workspace-form">
+            <app-chat-form
+                [formLayout]="layout"
+                (formSubmitted)="onFormSubmitted($event)"
+                (formCancelled)="onFormCancelled()"
+                (kanbanAction)="onKanbanAction($event)"
+                (kanbanBoardUpdated)="onKanbanBoardUpdated($event)">
+            </app-chat-form>
+          </div>
+        }
+        
+        @default {
+          <div class="workspace-default">
+            <div class="layout-preview">
+              <pre>{{ layout | json }}</pre>
+            </div>
+          </div>
+        }
+      }
+    }
+  </div>
+</div>

@@ -1,0 +1,206 @@
+<div class="app-container">
+  <mat-sidenav-container class="sidenav-container">
+    <mat-sidenav #sidenav [mode]="isMobileScreen ? 'over' : 'side'" [(opened)]="isSidebarOpen" class="sidebar">
+      <app-sidebar>
+        <!-- Add notifications section to sidebar -->
+        <div class="sidebar-notifications" *ngIf="!isMobileScreen">
+          <button mat-icon-button (click)="openNotificationsModal()" class="notification-button">
+            <mat-icon>notifications</mat-icon>
+            <span class="notification-badge" *ngIf="unreadNotificationsCount > 0">
+              {{ unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount }}
+            </span>
+          </button>
+        </div>
+      </app-sidebar>
+    </mat-sidenav>
+    
+    <mat-sidenav-content class="content">
+      <div class="header">
+        <div class="header-left">
+          <button mat-icon-button (click)="toggleSidebar()" class="menu-button">
+            <mat-icon>menu</mat-icon>
+          </button>
+          <h1 class="title">{{title}}</h1>
+          
+            @if (isMobileScreen) {
+            <button mat-icon-button (click)="openNotificationsModal()" class="mobile-notification-button">
+              <mat-icon>notifications</mat-icon>
+              <span class="notification-badge" *ngIf="unreadNotificationsCount > 0">
+                {{ unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount }}
+              </span>
+            </button>
+            
+            @if (activeLayout) {
+              <button mat-icon-button (click)="toggleChatVisibility()" class="chat-toggle-button">
+                <mat-icon>{{showChatOnMobile ? 'close' : 'chat'}}</mat-icon>
+              </button>
+            }
+          }
+        </div>
+        
+        <!-- MCP and OpenAI Configuration in Header -->
+        <div class="header-right">
+        <app-mcp-client 
+            (tools)="toolsList($event)" 
+            (sendOpenAiKey)="InitializeLLM($event)"
+            [displayMode]="'header'"
+            (notificationsChange)="onNotificationsUpdate($event)"
+            (unreadCountChange)="onUnreadCountUpdate($event)">
+          </app-mcp-client>
+          
+          <!-- Loader and Progress Bar -->
+          @if (isLoading || progressPercentage > 0 ){
+            <div class="progress-container">
+              <div class="progress-info">
+                @if (totalTools > 0){
+                  <span>
+                    Tool {{currentToolIndex}} of {{totalTools}} ({{progressPercentage}}%)
+                  </span>
+                }
+                @if (totalTools === 0){
+                  <span>
+                    Processing...
+                  </span>
+                }
+              </div>
+              <mat-progress-bar 
+                mode="determinate" 
+                [value]="progressPercentage"
+                class="progress-bar">
+              </mat-progress-bar>
+              @if (isLoading){
+                <div class="loader-spinner">
+                  <mat-spinner diameter="20"></mat-spinner>
+                </div>
+                <button 
+                  mat-icon-button 
+                  color="warn" 
+                  (click)="cancelOperation()"
+                  class="cancel-button"
+                  title="Cancel operation">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+      
+      <!-- Main content area with workspace layout -->
+      <div class="main-content-wrapper" 
+           [class.mobile-chat-visible]="showChatOnMobile"
+           [class.mobile-workspace-visible]="!showChatOnMobile">
+        
+        <!-- Left side: Chat messages and input (40%) -->
+        <div class="chat-sidebar" [style.width.%]="chatWidth" cdkDropList [cdkDropListData]="['chat']">
+          <div class="drag-handle" cdkDragHandle>
+            <mat-icon>drag_indicator</mat-icon>
+          </div>
+          <div class="chat-container">
+            <div class="chat-content-wrapper">
+              <app-chatbot 
+                [messages]="chatMessages" 
+                (formSubmittedFromChat)="onChatFormSubmitted($event)"
+                (layoutSelected)="onLayoutSelected($event)"
+                #chatComponent>
+              </app-chatbot>
+            </div>
+            <div class="input-container">
+              <app-input-box 
+                (sendMessage)="agentWorkflow($event)" 
+                (sendTool)="testTool($event)">
+              </app-input-box>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Resize handle for drag -->
+        <div class="resize-handle" cdkDrag (cdkDragMoved)="onResizeDrag($event)"></div>
+        
+        <!-- Right side: Workspace (60%) -->
+        <div class="workspace-area" [style.width.%]="workspaceWidth" cdkDropList [cdkDropListData]="['workspace']">
+          @if (activeLayout) {
+            <app-workspace 
+              [layout]="activeLayout"
+              (layoutClosed)="onLayoutClosed()">
+            </app-workspace>
+          } @else {
+            <div class="workspace-empty-state">
+              <mat-icon class="empty-icon">dashboard</mat-icon>
+              <h3>Workspace Area</h3>
+              <p>Select a layout from the chat to display it here</p>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-sidenav-content>
+  </mat-sidenav-container>
+  
+  <!-- Elicitation Modal Dialog -->
+  @if (selectedTool) {
+    <div class="modal-overlay" (click)="closeElicitationModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+
+        <div class="modal-body">
+        <div class="modal-header">
+          <h2>Tool Configuration</h2>
+          <button mat-icon-button (click)="closeElicitationModal()" class="close-modal-button">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+          <app-elicitation 
+            [tool]="selectedTool" 
+            (sendToolRequest)="tool_request($event)" 
+            (sendToolResponse)="tool_response($event)"
+            (close)="closeElicitationModal()">
+          </app-elicitation>
+        </div>
+      </div>
+    </div>
+  }
+
+   @if (showNotificationsModal) {
+    <div class="modal-overlay" (click)="closeNotificationsModal()">
+      <div class="modal-content notifications-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Notifications</h2>
+          <div class="modal-actions">
+            <button mat-button (click)="markAllAsRead()">Mark all as read</button>
+            <button mat-button (click)="clearAllNotifications()">Clear all</button>
+            <button mat-icon-button (click)="closeNotificationsModal()" class="close-modal-button">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </div>
+        <div class="modal-body">
+          @if (notifications.length > 0) {
+            <div class="notifications-list">
+              @for (notification of notifications; track notification.id) {
+                <div class="notification-item" [class.unread]="!notification.read">
+                  <div class="notification-icon">
+                    <mat-icon [class]="getNotificationIconClass(notification.type)">
+                      {{ getNotificationIcon(notification.type) }}
+                    </mat-icon>
+                  </div>
+                  <div class="notification-content">
+                    <div class="notification-title">{{ notification.title }}</div>
+                    <div class="notification-message">{{ notification.message }}</div>
+                    <div class="notification-time">{{ notification.timestamp | date:'short' }}</div>
+                  </div>
+                  <button mat-icon-button (click)="markAsRead(notification)" *ngIf="!notification.read">
+                    <mat-icon>check_circle</mat-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-notifications">
+              <mat-icon>notifications_off</mat-icon>
+              <p>No notifications</p>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

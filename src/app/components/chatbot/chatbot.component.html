@@ -12,46 +12,17 @@
           }
         </div>
 
-        <!-- Tables with Pipes -->
-        <!-- @if (message.layouts | filterTables; as tables) {
-          <div class="table-container">
-            @for (table of tables; track table) {
-              <div class="table-wrapper">
-                @if (table.data.table_name) {
-                  <div class="table-header">Table: {{ table.data.table_name }}</div>
-                }
-                @if (table | hasValidTableStructure) {
-                  <table class="dynamic-table">
-                    <thead>
-                      <tr>
-                        @for (header of table.data.column_names; track header) {
-                          <th [title]="header">{{ header }}</th>
-                        }
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (row of table.data.data; track $index) {
-                        <tr>
-                          @for (cell of row; track $index) {
-                            <td [title]="cell">{{ cell }}</td>
-                          }
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                } @else {
-                  <div class="table-error">Invalid table structure</div>
-                }
-              </div>
-            }
-          </div>
-        } -->
-
         <!-- Updated chatbot HTML for AG Grid tables -->
           @if (message.layouts | filterTables; as tables) {
             <div class="tables-container">
               @for (table of tables; track $index) {
                 <div class="table-wrapper">
+                  <div class="workspace-action">
+                    <button mat-icon-button (click)="selectLayout(table); $event.stopPropagation()" 
+                            class="open-workspace-btn" title="Open in Workspace">
+                      <mat-icon>open_in_new</mat-icon>
+                    </button>
+                  </div>
                   @if (table | hasValidTableStructure) {
                     <app-chat-data-table [tableData]="table.data" />
                   } @else {
@@ -91,7 +62,13 @@
           <div class="map-container">
             @for (mapLayout of maps; track mapLayout; let mapIndex = $index) {
               @if (mapLayout | isValidMapLayout) {
-                <div class="map-wrapper">
+                <div class="map-wrapper" (click)="selectLayout(mapLayout)">
+                  <div class="workspace-action">
+                    <button mat-icon-button (click)="selectLayout(mapLayout); $event.stopPropagation()" 
+                            class="open-workspace-btn" title="Open in Workspace">
+                      <mat-icon>open_in_new</mat-icon>
+                    </button>
+                  </div>
                   <!-- Use hasMapTitle pipe for condition -->
                   @if (mapLayout | hasMapTitle) {
                     <div class="map-header">{{ mapLayout | getMapTitle }}</div>
@@ -114,28 +91,18 @@
           </div>
         }
 
-        <!-- Forms with pipes -->
-        <!-- @if ((message.layouts || []) | filterForms; as forms) {
-        <div class="form-container">
-          @for (formLayout of forms; track formLayout; let formIndex = $index) {
-            @if (formLayout | isValidFormLayout) {
-              <app-chat-form
-                [formLayout]="formLayout"
-                (formSubmitted)="onChatFormSubmitted($event, message)"
-                (formCancelled)="onChatFormCancelled()">
-              </app-chat-form>
-            } @else {
-              <div class="form-error">Invalid form layout</div>
-            }
-          }
-        </div>
-        } -->
         <!-- Form layouts -->
         @if (message.layouts && message.layouts.length > 0) {
           <div class="form-layouts">
             @for (layout of message.layouts | filterForms; track $index) {
-              <div class="form-container">
+              <div class="form-container" (click)="selectLayout(layout)">
                 @if (layout | isValidFormLayout) {
+                  <div class="workspace-action">
+                    <button mat-icon-button (click)="selectLayout(layout); $event.stopPropagation()" 
+                            class="open-workspace-btn" title="Open in Workspace">
+                      <mat-icon>open_in_new</mat-icon>
+                    </button>
+                  </div>
                   <app-chat-form
                     [formLayout]="layout"
                     (formSubmitted)="onChatFormSubmitted($event, message)"
@@ -158,8 +125,14 @@
         @if (message.layouts && message.layouts.length > 0) {
           <div class="kanban-layouts">
             @for (layout of message.layouts | filterKanban; track $index) {
-              <div class="kanban-container">
+              <div class="kanban-container" (click)="selectLayout(layout)">
                 @if (layout | isKanbanLayout) {
+                  <div class="workspace-action">
+                    <button mat-icon-button (click)="selectLayout(layout); $event.stopPropagation()" 
+                            class="open-workspace-btn" title="Open in Workspace">
+                      <mat-icon>open_in_new</mat-icon>
+                    </button>
+                  </div>
                   <app-chat-kanban
                     [kanbanLayout]="layout"
                     (actionTriggered)="onKanbanAction($event)"

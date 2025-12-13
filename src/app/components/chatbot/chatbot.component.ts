@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { MarkdownModule } from 'ngx-markdown';
 import { MapComponent } from '../map/map.component';
 import { Component, ViewChild, ElementRef, Input, Output, EventEmitter } from '@angular/core';
+import {MatIconModule} from '@angular/material/icon';
+
 import { Message, MapLayout, FeatureDetail, WMSLayer, Layout, 
   ButtonFormat, ButtonLayout, TableLayout } from '../models/message.model';
   // Import all the pipes
@@ -58,7 +60,8 @@ import { ChatDataTableComponent } from '../chat-data-table/chat-data-table.compo
     ChatDataTableComponent,
     ChatKanbanComponent,
     FilterKanbanPipe,
-    IsKanbanLayoutPipe
+    IsKanbanLayoutPipe,
+    MatIconModule
   ],
   templateUrl: './chatbot.component.html',
   styleUrl: './chatbot.component.css',
@@ -79,6 +82,7 @@ export class ChatbotComponent{
   mapZoom: number = 2;
   shouldScrollToBottom = true;
   @Output() formSubmittedFromChat: EventEmitter<any> = new EventEmitter<any>()
+  @Output() layoutSelected = new EventEmitter<any>();
     // New methods for layout management
   hasActiveLayout(): boolean {
     return this.activeLayoutMessageId !== null && this.activeLayoutType !== null;
@@ -448,5 +452,9 @@ export class ChatbotComponent{
     // Your existing MCP communication logic
     console.log('Sending to MCP:', data);
     // this.mcpService.executeTool(data).subscribe(...);
+  }
+
+    selectLayout(layout: any): void {
+    this.layoutSelected.emit(layout);
   }
 }

@@ -1,4 +1,4 @@
-<button (click)="mcp_props.domain= mcpServer();openDomainDialog(mcp_props)">MCP config</button>
+<!-- <button (click)="mcp_props.domain= getMCPServer();openDomainDialog(mcp_props)">MCP config</button>
 <button (click)="openai_props.domain= openAiKey();openDomainDialog(openai_props)">Open Ai config</button>
 
 <div class="status-indicator">
@@ -11,7 +11,6 @@
 </div>
 @if (isConnected) {
   <div>
-    <!-- Notifications -->
     <div class="notifications">
       <h6>Notifications ({{ notifications.length }})</h6>
       @for (notification of notifications; track notification) {
@@ -22,10 +21,128 @@
     </div>
   </div>
 } @else {
-  <!-- <h5>Disconnected from MCP Server</h5> -->
-  <button (click)="connect(mcpServer())">Connect</button>
+  <button (click)="connect(getMCPServer())">Connect</button>
   @if (loader) {
     <img src="gif/Spinner.gif"/>
   }
 }
+ -->
 
+ <div class="mcp-client" [class.header-mode]="displayMode === 'header'">
+  <!-- For header display mode (compact) -->
+  @if (displayMode === 'header') {
+    <div class="header-compact-view">
+      <button mat-icon-button 
+              [matTooltip]="isConnected ? 'Disconnect from MCP' : 'Connect to MCP'"
+              (click)="toggleConnection()"
+              class="connection-button">
+        <mat-icon [class.connected]="isConnected" [class.disconnected]="!isConnected">
+          {{ isConnected ? 'link' : 'link_off' }}
+        </mat-icon>
+      </button>
+      
+      <button mat-icon-button 
+              matTooltip="MCP Configuration"
+              (click)="mcp_props.domain= mcpServer();openMCPConfigDialog()">
+        <mat-icon>settings</mat-icon>
+      </button>
+      
+      <button mat-icon-button 
+              matTooltip="OpenAI Configuration"
+              (click)="openai_props.domain= openAiKey();toggleOpenAiConfig(openai_props)">
+        <mat-icon>key</mat-icon>
+      </button>
+    </div>
+  }
+  
+  <!-- For sidebar display mode (full) -->
+  @if (displayMode === 'sidebar') {
+    <div class="sidebar-full-view">
+      <h3>MCP Configuration</h3>
+      
+      <!-- Connection Status -->
+      <div class="connection-section">
+        <div class="status-indicator">
+          <div class="status-dot" [class.connected]="isConnected" [class.disconnected]="!isConnected"></div>
+          <span class="status-text">
+            {{ isConnected ? 'Connected' : 'Disconnected' }}
+          </span>
+        </div>
+        
+        <div class="connection-actions">
+          @if (isConnected) {
+            <button mat-raised-button color="warn" (click)="disconnect()" class="action-button">
+              Disconnect
+            </button>
+          } @else {
+            <button mat-raised-button color="primary" (click)="toggleConnection()" class="action-button">
+              Connect
+            </button>
+          }
+        </div>
+      </div>
+      
+      <!-- Configuration Buttons -->
+      <div class="config-buttons">
+        <button mat-stroked-button (click)="openMCPConfigDialog()" class="config-button">
+          <mat-icon>settings</mat-icon>
+          MCP Config
+        </button>
+        
+        <button mat-stroked-button (click)="toggleOpenAiConfig(openai_props)" class="config-button">
+          <mat-icon>key</mat-icon>
+          OpenAI Config
+        </button>
+      </div>
+      
+      <!-- OpenAI Configuration Panel (when toggled) -->
+      @if (showOpenAiConfig) {
+        <div class="openai-config-panel">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>OpenAI API Key</mat-label>
+            <input matInput 
+                   [type]="showOpenAiKey ? 'text' : 'password'"
+                   [(ngModel)]="openAiKeyValue"
+                   placeholder="sk-...">
+            <button mat-icon-button matSuffix (click)="toggleKeyVisibility()">
+              <mat-icon>{{ showOpenAiKey ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+          </mat-form-field>
+          <button mat-raised-button color="primary" (click)="onOpenAiKeyChange()" class="save-button">
+            Save Key
+          </button>
+        </div>
+      }
+      
+      <!-- Server URL Display -->
+      @if (mcpServerUrl) {
+        <div class="server-url-display">
+          <small>Server: {{ mcpServerUrl }}</small>
+        </div>
+      }
+      
+      <!-- Loader -->
+      @if (loader) {
+        <div class="loader-container">
+          <mat-progress-spinner diameter="30" mode="indeterminate"></mat-progress-spinner>
+          <span>Connecting...</span>
+        </div>
+      }
+      
+      <!-- Elicitation Request (if any) -->
+      @if (currentElicitRequest) {
+        <div class="elicitation-request">
+          <h4>Tool Configuration Required</h4>
+          <p>{{ currentElicitRequest.tool?.name || 'A tool' }} requires configuration</p>
+          <!-- Add your elicitation form here if needed -->
+        </div>
+      }
+      
+      <!-- New Chat Button -->
+      <button mat-raised-button color="accent" (click)="startNewChat()" class="new-chat-button">
+        <mat-icon>add</mat-icon>
+        New Chat
+      </button>
+    </div>
+  }
+</div>

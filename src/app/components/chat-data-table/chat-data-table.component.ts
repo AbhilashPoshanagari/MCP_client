@@ -264,7 +264,7 @@ export class ChatDataTableComponent implements OnInit, OnChanges, AfterViewInit 
   }
 
   onGridReady(params: GridReadyEvent) {
-    console.log('Grid ready event fired');
+    // console.log('Grid ready event fired');
     this.gridApi = params.api;
     
     // Set initial data

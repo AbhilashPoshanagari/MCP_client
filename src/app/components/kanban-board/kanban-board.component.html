@@ -21,13 +21,6 @@
     </div>
 
     <div class="board-actions">
-      @if (settings.allow_card_creation) {
-        <button
-          class="btn-add-card"
-          (click)="openAddCardDialog()">
-          <i class="icon-plus"></i> Add Card
-        </button>
-      }
       <button class="btn-settings" (click)="toggleSettings()">
         <i class="icon-settings"></i>
       </button>
@@ -88,12 +81,6 @@
             <span class="card-count">{{ column.cards.length }}</span>
           </div>
           <div class="column-actions">
-            @if (settings.allow_card_creation) {
-              <button class="btn-column-add"
-                (click)="openAddCardDialog(column)">
-                <i class="icon-plus-small"></i>
-              </button>
-            }
             @if (settings.show_wip_limits && column.wip_limit) {
               <span class="wip-limit">
                 WIP: {{ column.cards.length }}/{{ column.wip_limit }}
@@ -211,20 +198,6 @@
             <div class="empty-column">
               <i class="icon-empty"></i>
               <p>No cards</p>
-              @if (settings.allow_card_creation) {
-                <button
-                  class="btn-add-to-empty"
-                  (click)="openAddCardDialog(column)">
-                  Add a card
-                </button>
-              }
-            </div>
-          }
-          <!-- Add Card Placeholder -->
-          @if (isAddingCardToColumn === column.id) {
-            <div class="add-card-placeholder"
-              (click)="openAddCardDialog(column)">
-              + Add another card
             </div>
           }
         </div>
@@ -314,9 +287,7 @@
           <button class="btn-secondary" (click)="closeCardDetail()">
             Close
           </button>
-          <button class="btn-primary" (click)="editCard(selectedCard)">
-            Edit Card
-          </button>
+
         </div>
       </div>
     </div>
@@ -328,15 +299,6 @@
       [style.top.px]="menuPosition.y"
       [style.left.px]="menuPosition.x">
       <ul>
-        <li (click)="editCard(selectedCardForMenu)">
-          <i class="icon-edit"></i> Edit
-        </li>
-        @if (settings.allow_card_deletion) {
-          <li
-            (click)="deleteCard(selectedCardForMenu)">
-            <i class="icon-delete"></i> Delete
-          </li>
-        }
         <li (click)="moveCardToColumn(selectedCardForMenu, 'todo')">
           <i class="icon-move"></i> Move to Todo
         </li>
@@ -357,28 +319,4 @@
     </div>
   }
 
-  <!-- Add this to your kanban-board.component.html, right before the closing div -->
-
-<!-- Form Modal -->
-@if (showForm && formLayout) {
-  <div class="modal-overlay form-modal" (click)="closeForm()">
-    <div class="modal-content form-modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h3>{{ formLayout.data.title }}</h3>
-        <button class="btn-close" (click)="closeForm()">
-          <i class="icon-close"></i>
-        </button>
-      </div>
-      <div class="modal-body">
-        <app-chat-form
-          [formLayout]="formLayout"
-          (formSubmitted)="handleFormSubmitted($event)"
-          (formCancelled)="handleFormCancelled()"
-          (kanbanAction)="handleKanbanAction($event)"
-          (kanbanBoardUpdated)="handleKanbanBoardUpdated($event)">
-        </app-chat-form>
-      </div>
-    </div>
-  </div>
-}
 </div>

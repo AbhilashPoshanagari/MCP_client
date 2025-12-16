@@ -142,13 +142,13 @@ export interface FormWidget {
 // -------------------
 export interface FormInfo {
   _id: string;
-  id: string;
-  name: string;
-  createdBy: string;
-  description: string;
-  dependentFields: any[];
-  displayField: any[];
-  version: string;
+  form_id: string;
+  form_name: string;
+  createdBy?: string;
+  description?: string;
+  dependentFields?: any[];
+  displayField?: any[];
+  version?: string;
 }
 
 export interface FormData {
@@ -165,9 +165,11 @@ export interface FormResponse {
 }
 
 export interface FormAction {
-  type: 'tool' | 'cancel' | 'custom';
+  type: 'tool' | 'api';
   title: string,
   tool_name?: string;
+  url?: string;
+  method?: string;
   description: string;
   params?: { [key: string]: any };
 }
@@ -182,6 +184,7 @@ export interface FormLayout extends Layout {
   data: {
     title: string;
     schema: any;
+    form_info?: FormInfo;
     metadata?: {
       formId: string;
       createdBy: string;
@@ -237,20 +240,6 @@ export interface FormWidget {
   __v: number;
   options?: Option[];
   isReassign?: boolean;
-}
-
-// FormInfo model
-export interface FormInfo {
-  _id: string;
-  name: string;
-  createdBy: string;
-  description: string;
-  version: string;
-  dependentFields: any[];
-  displayField: any[];
-  
-  // If you're using alias for _id
-  id: string; // For mapping _id to id if needed
 }
 
 // FormData model

@@ -18,7 +18,7 @@
   <!-- Submission Status Banner -->
   @if (isSubmitted) {
     <div class="submission-banner success">
-      ✓ Form submitted successfully
+      ✓ {{ formSubmittedMessage }}
     </div>
   }
 
@@ -27,7 +27,7 @@
     <div class="metadata-panel">
       <div class="metadata-content">
         <h4>Form Information</h4>
-        @for (item of getMetadataEntries(formLayout.data.metadata); track item) {
+        @for (item of metadataEntries; track item) {
           <div class="metadata-item">
             <strong>{{ item.key | titlecase }}:</strong> {{ item.value }}
           </div>
@@ -127,22 +127,4 @@
     </form>
   </div>
 
-  <!-- Action Buttons -->
-  <!-- <div class="form-actions-bottom">
-  <button
-    type="submit"
-    class="btn btn-primary"
-    (click)="onSubmit()"
-    [disabled]="form.invalid || isSubmitting"
-    >
-    {{ isSubmitting ? 'Submitting...' : (formLayout.data.actions.submit.title || 'Submit') }}
-  </button>
-  <button
-    type="button"
-    class="btn btn-secondary"
-    (click)="onCancel()"
-    >
-    {{ formLayout.data.actions.cancel.title || 'Cancel' }}
-  </button>
-</div> -->
 </div>

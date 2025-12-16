@@ -62,7 +62,7 @@
           <div class="map-container">
             @for (mapLayout of maps; track mapLayout; let mapIndex = $index) {
               @if (mapLayout | isValidMapLayout) {
-                <div class="map-wrapper" (click)="selectLayout(mapLayout)">
+                <div class="map-wrapper" >
                   <div class="workspace-action">
                     <button mat-icon-button (click)="selectLayout(mapLayout); $event.stopPropagation()" 
                             class="open-workspace-btn" title="Open in Workspace">
@@ -95,7 +95,7 @@
         @if (message.layouts && message.layouts.length > 0) {
           <div class="form-layouts">
             @for (layout of message.layouts | filterForms; track $index) {
-              <div class="form-container" (click)="selectLayout(layout)">
+              <div class="form-container" >
                 @if (layout | isValidFormLayout) {
                   <div class="workspace-action">
                     <button mat-icon-button (click)="selectLayout(layout); $event.stopPropagation()" 
@@ -125,7 +125,7 @@
         @if (message.layouts && message.layouts.length > 0) {
           <div class="kanban-layouts">
             @for (layout of message.layouts | filterKanban; track $index) {
-              <div class="kanban-container" (click)="selectLayout(layout)">
+              <div class="kanban-container">
                 @if (layout | isKanbanLayout) {
                   <div class="workspace-action">
                     <button mat-icon-button (click)="selectLayout(layout); $event.stopPropagation()" 

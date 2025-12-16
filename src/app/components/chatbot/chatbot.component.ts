@@ -329,8 +329,6 @@ export class ChatbotComponent{
 
     // Update the form section in template methods
   onChatFormSubmitted(event: {toolName: string, params: any}, message: any): void {
-    console.log('Chat form submitted:', event);
-    
     // Notify app component that a form was submitted from chat
     this.formSubmittedFromChat.emit({
       toolName: event.toolName,

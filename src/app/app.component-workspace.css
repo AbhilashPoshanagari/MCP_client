@@ -6,7 +6,7 @@
   font-family: 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Header improvements */
+/* Header */
 .header {
   display: flex;
   justify-content: space-between;
@@ -140,16 +140,16 @@
   overflow: hidden;
 }
 
-/* Main content wrapper with draggable split */
-/* .main-content-wrapper {
+/* Main content wrapper */
+.main-content-wrapper {
   display: flex;
   height: calc(100vh - 64px);
   overflow: hidden;
   position: relative;
-} */
+}
 
 /* Drag handle for resizing */
-/* .resize-handle {
+.resize-handle {
   width: 8px;
   background: #e0e0e0;
   cursor: col-resize;
@@ -158,8 +158,9 @@
   justify-content: center;
   z-index: 10;
   position: relative;
+  touch-action: none;
   transition: background-color 0.2s;
-} */
+}
 
 .resize-handle:hover {
   background: #2196f3;
@@ -178,14 +179,16 @@
 }
 
 /* Chat sidebar */
-/* .chat-sidebar {
+.chat-sidebar {
   display: flex;
   flex-direction: column;
   background: #f8f9fa;
   position: relative;
   min-width: 300px;
+  max-width: 80%;
+  width: 40%; /* Default */
   overflow: hidden;
-} */
+}
 
 .drag-handle {
   position: absolute;
@@ -228,13 +231,15 @@
 }
 
 /* Workspace area */
-/* .workspace-area {
+.workspace-area {
   flex: 1;
   padding: 16px;
   background: #f5f5f5;
   overflow: auto;
   min-width: 300px;
-} */
+  max-width: 80%;
+  width: 60%; /* Default */
+}
 
 .workspace-empty-state {
   display: flex;
@@ -325,12 +330,14 @@
 @media (max-width: 768px) {
   .main-content-wrapper {
     flex-direction: column;
+    height: calc(100vh - 56px);
+    position: relative;
   }
   
   .chat-sidebar,
   .workspace-area {
     width: 100% !important;
-    height: 100vh !important;
+    height: 100% !important;
     position: absolute;
     top: 0;
     left: 0;
@@ -338,6 +345,13 @@
     bottom: 0;
     transition: transform 0.3s ease;
     z-index: 1;
+    max-width: 100% !important;
+  }
+
+  .chat-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 120px; /* Space for input */
   }
   
   .chat-sidebar {
@@ -398,47 +412,49 @@
   }
   
   ::ng-deep .mcp-client-container.header-mode .config-field {
-    width: 100%;
+    width: 50%;
   }
   
   .progress-container {
     width: 100%;
-    justify-content: center;
+    justify-content: flex-start;
+    margin-top: 8px;
+  }
+  
+  .progress-info {
+    text-align: left;
+    min-width: auto;
+    font-size: 0.85rem;
+  }
+  
+  .progress-bar {
+    flex: 1;
+    width: auto;
   }
   
   .title {
     font-size: 1.1rem;
   }
+  
+  /* FIX: Mobile input box styles */
+  .input-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 1px solid #dee2e6;
+    padding: 8px 12px;
+    z-index: 100;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .chat-content-wrapper {
+    padding-bottom: 180px; /* Increased space for input container */
+  }
 }
 
-/* Larger mobile devices (tablets) */
-@media (min-width: 481px) and (max-width: 768px) {
-  ::ng-deep .mcp-client-container.header-mode .header-config {
-    flex-direction: row;
-    flex-wrap: wrap;
-  }
-  
-  ::ng-deep .mcp-client-container.header-mode .config-field {
-    width: 180px;
-  }
-}
-
-/* Desktop styles */
-/* @media (min-width: 769px) {
-  .chat-sidebar {
-    width: calc(var(--chat-width, 40) * 1%);
-  }
-  
-  .workspace-area {
-    width: calc(var(--workspace-width, 60) * 1%);
-  }
-  
-  .sidebar {
-    width: 350px !important;
-  }
-} */
-
-/* Additional responsive adjustments */
+/* Additional mobile styles for small screens */
 @media (max-width: 480px) {
   .header {
     min-height: 56px;
@@ -456,11 +472,7 @@
   
   .chat-content-wrapper {
     padding: 12px;
-    padding-bottom: 70px;
-  }
-  
-  .input-container {
-    padding: 12px;
+    padding-bottom: 180px; /* Ensure enough space for input */
   }
   
   .modal-content {
@@ -475,151 +487,23 @@
   .modal-body {
     padding: 20px;
   }
-}
-
-/* Safe area insets for modern mobile devices */
-@supports(padding: max(0px)) {
-  .header, .input-container {
-    padding-left: max(1px, env(safe-area-inset-left));
-    padding-right: max(1px, env(safe-area-inset-right));
-  }
   
+  /* FIX: Input container for very small screens */
   .input-container {
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
-  }
-  
-  .modal-content {
-    margin: max(12px, env(safe-area-inset-top)) 
-            max(12px, env(safe-area-inset-right)) 
-            max(12px, env(safe-area-inset-bottom)) 
-            max(12px, env(safe-area-inset-left));
-  }
-}
-
-/* Drag and drop styling */
-.cdk-drag-placeholder {
-  opacity: 0;
-}
-
-.cdk-drag-animating {
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-}
-
-.cdk-drop-list-dragging .cdk-drag {
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-}
-
-/* Ensure drag handle is properly positioned */
-.resize-handle {
-  width: 8px;
-  background: #ddd;
-  cursor: col-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 10;
-  touch-action: none; /* Important for mobile drag */
-}
-
-.resize-handle:hover {
-  background: #ccc;
-}
-
-.resize-handle:active {
-  background: #2196F3;
-}
-
-/* Update chat and workspace areas to use percentage widths */
-.chat-sidebar {
-  width: 40%; /* Default */
-  min-width: 300px;
-  max-width: 80%;
-  position: relative;
-}
-
-.workspace-area {
-  width: 60%; /* Default */
-  min-width: 300px;
-  max-width: 80%;
-  flex: 1;
-}
-
-/* Update main content wrapper to use flexbox properly */
-.main-content-wrapper {
-  display: flex;
-  height: calc(100vh - 64px); /* Adjust based on header height */
-  position: relative;
-}
-
-/* Mobile styles */
-@media (max-width: 767px) {
-  .sidenav-container {
-    height: 100vh;
-  }
-  
-  .sidebar {
-    width: 280px !important;
-    max-width: 85vw;
-  }
-  
-  /* Hide sidebar on mobile by default */
-  .sidebar:not(.mat-sidenav-opened) {
-    transform: translateX(-100%);
-  }
-  
-  /* Header adjustments for mobile */
-  .header {
-    padding: 0 8px !important;
-    height: 56px !important; /* Smaller header on mobile */
-  }
-  
-  .title {
-    font-size: 1.1rem !important;
-    margin-left: 8px !important;
-  }
-  
-  /* Mobile notification button */
-  .mobile-notification-button {
-    margin-right: 8px;
-  }
-  
-  /* Main content adjustments */
-  .main-content-wrapper {
-    flex-direction: column;
-    height: calc(100vh - 56px) !important;
-  }
-  
-  .chat-sidebar,
-  .workspace-area {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-width: 100% !important;
-    height: 100%;
-  }
-  
-  /* Hide resize handle on mobile */
-  .resize-handle {
-    display: none;
-  }
-  
-  /* Chat toggle for mobile */
-  .mobile-chat-visible .workspace-area {
-    display: none;
-  }
-  
-  .mobile-workspace-visible .chat-sidebar {
-    display: none;
-  }
-  
-  /* Drag handle visibility */
-  .drag-handle {
-    display: none; /* Hide drag handle on mobile */
+    padding: 6px 8px;
   }
 }
 
 /* Desktop styles */
-@media (min-width: 768px) {
+@media (min-width: 769px) {
+  .chat-sidebar {
+    width: calc(var(--chat-width, 40) * 1%);
+  }
+  
+  .workspace-area {
+    width: calc(var(--workspace-width, 60) * 1%);
+  }
+  
   .sidebar {
     width: 250px !important;
   }
@@ -638,15 +522,6 @@
     right: 0;
     text-align: center;
   }
-
-    .chat-sidebar {
-    width: calc(var(--chat-width, 40) * 1%);
-  }
-  
-  .workspace-area {
-    width: calc(var(--workspace-width, 60) * 1%);
-  }
-  
 }
 
 /* Notification badge styles */
@@ -735,4 +610,36 @@
   width: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
+}
+
+/* Drag and drop styling */
+.cdk-drag-placeholder {
+  opacity: 0;
+}
+
+.cdk-drag-animating {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.cdk-drop-list-dragging .cdk-drag {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Safe area insets for modern mobile devices */
+@supports(padding: max(0px)) {
+  .header, .input-container {
+    padding-left: max(1px, env(safe-area-inset-left));
+    padding-right: max(1px, env(safe-area-inset-right));
+  }
+  
+  .input-container {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  
+  .modal-content {
+    margin: max(12px, env(safe-area-inset-top)) 
+            max(12px, env(safe-area-inset-right)) 
+            max(12px, env(safe-area-inset-bottom)) 
+            max(12px, env(safe-area-inset-left));
+  }
 }

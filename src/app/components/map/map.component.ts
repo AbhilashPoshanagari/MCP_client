@@ -456,19 +456,24 @@ export class MapComponent implements OnInit, OnChanges, AfterViewInit {
 
   // Public method to fit bounds to features
   fitToFeatures() {
-    if (this.useGeoJson && this.geoJsonLayer) {
-      this.map.fitBounds(this.geoJsonLayer.getBounds(), {
-        padding: [20, 20],
-        maxZoom: 15
-      });
-    } else if (this.featureDetails.length > 0) {
       const bounds = L.latLngBounds([]);
+
+      if (this.useGeoJson && this.geoJsonLayer) {
+        this.map.fitBounds(this.geoJsonLayer.getBounds(), {
+          padding: [20, 20],
+          maxZoom: 15
+        });
+        return;
+      }
+
+      if (!this.featureDetails || this.featureDetails.length === 0) return;
+
       this.featureDetails.forEach(feature => {
-        if (feature.coordinates) {
-          bounds.extend([feature.coordinates[0], feature.coordinates[1]]);
-        }
+        if (!feature.geometry) return;
+
+        this.extendBoundsFromGeometry(bounds, feature.geometry);
       });
-      
+
       if (bounds.isValid()) {
         this.map.fitBounds(bounds, {
           padding: [20, 20],
@@ -476,7 +481,6 @@ export class MapComponent implements OnInit, OnChanges, AfterViewInit {
         });
       }
     }
-  }
 
   // Public method to add a single feature
   addFeature(feature: FeatureDetail) {
@@ -511,4 +515,49 @@ export class MapComponent implements OnInit, OnChanges, AfterViewInit {
       this.map.remove();
     }
   }
+
+  private extendBoundsFromGeometry(bounds: L.LatLngBounds, geometry: any) {
+    const { type, coordinates } = geometry;
+
+    switch (type) {
+
+      case 'Point':
+        bounds.extend([coordinates[1], coordinates[0]]);
+        break;
+
+      case 'LineString':
+        coordinates.forEach((coord: number[]) => {
+          bounds.extend([coord[1], coord[0]]);
+        });
+        break;
+
+      case 'MultiLineString':
+        coordinates.forEach((line: number[][]) => {
+          line.forEach(coord => {
+            bounds.extend([coord[1], coord[0]]);
+          });
+        });
+        break;
+
+      case 'Polygon':
+        // Polygon = array of linear rings
+        coordinates.forEach((ring: number[][]) => {
+          ring.forEach(coord => {
+            bounds.extend([coord[1], coord[0]]);
+          });
+        });
+        break;
+
+      case 'MultiPolygon':
+        coordinates.forEach((polygon: number[][][]) => {
+          polygon.forEach((ring: number[][]) => {
+            ring.forEach(coord => {
+              bounds.extend([coord[1], coord[0]]);
+            });
+          });
+        });
+        break;
+    }
+  }
+
 }

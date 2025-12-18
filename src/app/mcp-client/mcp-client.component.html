@@ -29,7 +29,6 @@
  -->
 
  <div class="mcp-client" [class.header-mode]="displayMode === 'header'">
-  <!-- For header display mode (compact) -->
   @if (displayMode === 'header') {
     <div class="header-compact-view">
       <button mat-icon-button 
@@ -55,7 +54,6 @@
     </div>
   }
   
-  <!-- For sidebar display mode (full) -->
   @if (displayMode === 'sidebar') {
     <div class="sidebar-full-view">
       <h3>MCP Configuration</h3>

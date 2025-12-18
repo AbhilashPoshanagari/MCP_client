@@ -3,7 +3,7 @@
     <mat-sidenav #sidenav [mode]="isMobileScreen ? 'over' : 'side'" [(opened)]="isSidebarOpen" class="sidebar">
       <app-sidebar>
         <!-- Add notifications section to sidebar -->
-        <div class="sidebar-notifications" *ngIf="!isMobileScreen">
+        <div class="sidebar-notifications">
           <button mat-icon-button (click)="openNotificationsModal()" class="notification-button">
             <mat-icon>notifications</mat-icon>
             <span class="notification-badge" *ngIf="unreadNotificationsCount > 0">
@@ -22,7 +22,7 @@
           </button>
           <h1 class="title">{{title}}</h1>
           
-            @if (isMobileScreen) {
+            <!-- @if (isMobileScreen) { -->
             <button mat-icon-button (click)="openNotificationsModal()" class="mobile-notification-button">
               <mat-icon>notifications</mat-icon>
               <span class="notification-badge" *ngIf="unreadNotificationsCount > 0">
@@ -35,19 +35,11 @@
                 <mat-icon>{{showChatOnMobile ? 'close' : 'chat'}}</mat-icon>
               </button>
             }
-          }
+          <!-- } -->
         </div>
         
         <!-- MCP and OpenAI Configuration in Header -->
-        <div class="header-right">
-        <app-mcp-client 
-            (tools)="toolsList($event)" 
-            (sendOpenAiKey)="InitializeLLM($event)"
-            [displayMode]="'header'"
-            (notificationsChange)="onNotificationsUpdate($event)"
-            (unreadCountChange)="onUnreadCountUpdate($event)">
-          </app-mcp-client>
-          
+        <div class="header-right">          
           <!-- Loader and Progress Bar -->
           @if (isLoading || progressPercentage > 0 ){
             <div class="progress-container">
@@ -83,6 +75,14 @@
               }
             </div>
           }
+
+          <app-mcp-client 
+            (tools)="toolsList($event)" 
+            (sendOpenAiKey)="InitializeLLM($event)"
+            [displayMode]="'header'"
+            (notificationsChange)="onNotificationsUpdate($event)"
+            (unreadCountChange)="onUnreadCountUpdate($event)">
+          </app-mcp-client>
         </div>
       </div>
       

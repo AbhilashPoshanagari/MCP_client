@@ -222,7 +222,9 @@ interface ElicitResponse {
     MatBadgeModule,
     MatProgressSpinnerModule],
   templateUrl: './mcp-client.component.html',
+  // templateUrl: './mcp-client-sidemenu.component.html',
   styleUrls: ['./mcp-client.component.css'],
+  // styleUrls: ['./mcp-client-sidemenu.component.css'],
   standalone: true
 })
 export class McpClientComponent implements OnInit, OnDestroy {

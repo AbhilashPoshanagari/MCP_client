@@ -44,8 +44,9 @@ import { CommonModule, DatePipe } from '@angular/common';
   standalone: true,
   providers: [McpService, McpElicitationService],
   // templateUrl: './app.component.html',
+  // styleUrl: './app.component.css',
     templateUrl: './app.component-workspace.html',
-  styleUrl: './app.component-workspace.css',
+    styleUrl: './app.component-workspace.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 
 })
@@ -300,7 +301,7 @@ private initializeSidebarState() {
                 this.system_prompt,
                 this.human_prompt
                 );
-                this.llm_runnable = RunnableSequence.from([
+                this.finalRetrievalChain = RunnableSequence.from([
                         this.llm_with_tools.overall_prompt,
                         this.llm_with_tools.model_with_out_tools
                       ]);
@@ -628,23 +629,6 @@ isMapLayout(layouts: any): boolean {
     this.showChatOnMobile = !this.showChatOnMobile;
   }
 
-    // Handle resize drag
-  // onResizeDrag(event: CdkDragMove): void {
-  //   if (!this.isMobileScreen) {
-  //     const containerWidth = document.querySelector('.main-content-wrapper')?.clientWidth || 1000;
-  //     const deltaX = event.distance.x;
-  //     const deltaPercentage = (deltaX / containerWidth) * 100;
-      
-  //     // Update widths with constraints
-  //     this.chatWidth = Math.max(20, Math.min(80, this.chatWidth + deltaPercentage));
-  //     this.workspaceWidth = 100 - this.chatWidth;
-  //   }
-  // }
-
-  // selectTool(tool: any): void {
-  //   this.selectedTool = tool;
-  //   this.openElicitationModal(tool);
-  // }
 // Update the onResizeDrag method with better implementation
 onResizeDrag(event: CdkDragMove): void {
   if (!this.isMobileScreen) {

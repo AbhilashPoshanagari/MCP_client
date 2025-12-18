@@ -1,0 +1,28 @@
+<button (click)="mcp_props.domain= mcpServer();openDomainDialog(mcp_props)">MCP config</button>
+<button (click)="openai_props.domain= openAiKey();openDomainDialog(openai_props)">Open Ai config</button>
+
+<div class="status-indicator">
+  <i class="fas fa-circle" [ngClass]="{'connected': isConnected, 'disconnected': !isConnected}"></i>
+  <h5>{{ isConnected ? 'Connected to MCP Server' : 'Disconnected from MCP Server' }}</h5>
+  @if (isConnected){
+    <button (click)="disconnect()">Disconnect</button>
+  }
+
+</div>
+<div *ngIf="isConnected; else disconnected">  
+  <!-- Notifications -->
+  <div class="notifications">
+    <h6>Notifications ({{ notifications.length }})</h6>
+    <div *ngFor="let notification of notifications" class="notification">
+      <strong>{{ notification.type }}:</strong> {{ notification.message }}
+    </div>
+  </div>
+</div>
+
+<ng-template #disconnected>
+  <!-- <h5>Disconnected from MCP Server</h5> -->
+  <button (click)="connect(mcpServer())">Connect</button>
+  @if (loader) {
+    <img src="gif/Spinner.gif"/>
+  }
+</ng-template>

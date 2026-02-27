@@ -1,0 +1,207 @@
+<div class="login-modal-container">
+  <!-- Close button -->
+  <button mat-icon-button class="close-button" (click)="close()" aria-label="Close modal">
+    <mat-icon>close</mat-icon>
+  </button>
+
+  <!-- Logo/Header -->
+  <div class="modal-header">
+    <div class="logo-container">
+      <mat-icon class="logo-icon">account_circle</mat-icon>
+      <h1 class="app-title">Welcome</h1>
+    </div>
+    <p class="subtitle">Sign in to your account or create a new one</p>
+  </div>
+
+  <!-- Tabs -->
+  <mat-tab-group [(selectedIndex)]="activeTab" animationDuration="300ms" class="auth-tabs">
+    <!-- Login Tab -->
+    <mat-tab label="Sign In">
+      <div class="tab-content">
+        <form (ngSubmit)="onLogin()" class="auth-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Username</mat-label>
+            <input 
+              matInput 
+              [(ngModel)]="loginUsername" 
+              name="loginUsername"
+              type="text" 
+              required
+              [disabled]="isLoading"
+              placeholder="Enter your username">
+            <mat-icon matPrefix>person</mat-icon>
+            <mat-error *ngIf="!loginUsername && loginUsername">
+              Username is required
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Password</mat-label>
+            <input 
+              matInput 
+              [(ngModel)]="loginPassword" 
+              name="loginPassword"
+              type="password" 
+              required
+              [disabled]="isLoading"
+              placeholder="Enter your password">
+            <mat-icon matPrefix>lock</mat-icon>
+            <mat-error *ngIf="!loginPassword && loginPassword">
+              Password is required
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Forgot password link -->
+          <div class="forgot-password">
+            <a href="#" class="forgot-link">Forgot password?</a>
+          </div>
+
+          <!-- Submit button -->
+          <button 
+            mat-raised-button 
+            color="primary" 
+            type="submit"
+            [disabled]="isLoading"
+            class="auth-button full-width">
+            <div class="button-content">
+              <mat-spinner *ngIf="isLoading && activeTab === 'login'" diameter="20"></mat-spinner>
+              <span *ngIf="!(isLoading && activeTab === 'login')">Sign In</span>
+            </div>
+          </button>
+
+          <!-- Alternative login options -->
+          <div class="divider">
+            <span>or continue with</span>
+          </div>
+
+          <div class="social-login">
+            <button mat-stroked-button type="button" class="social-button">
+              <img src="assets/google.svg" alt="Google" class="social-icon">
+              Google
+            </button>
+            <button mat-stroked-button type="button" class="social-button">
+              <img src="assets/github.svg" alt="GitHub" class="social-icon">
+              GitHub
+            </button>
+          </div>
+        </form>
+      </div>
+    </mat-tab>
+
+    <!-- Register Tab -->
+    <mat-tab label="Sign Up">
+      <div class="tab-content">
+        <form (ngSubmit)="onRegister()" class="auth-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Username</mat-label>
+            <input 
+              matInput 
+              [(ngModel)]="registerUsername" 
+              name="registerUsername"
+              type="text" 
+              required
+              [disabled]="isLoading"
+              placeholder="Choose a username">
+            <mat-icon matPrefix>person_add</mat-icon>
+            <mat-error *ngIf="!registerUsername && registerUsername">
+              Username is required
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Email</mat-label>
+            <input 
+              matInput 
+              [(ngModel)]="registerEmail" 
+              name="registerEmail"
+              type="email" 
+              required
+              [disabled]="isLoading"
+              placeholder="Enter your email">
+            <mat-icon matPrefix>email</mat-icon>
+            <mat-error *ngIf="!registerEmail && registerEmail">
+              Valid email is required
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Password</mat-label>
+            <input 
+              matInput 
+              [(ngModel)]="registerPassword" 
+              name="registerPassword"
+              type="password" 
+              required
+              [disabled]="isLoading"
+              placeholder="Create a password (min. 6 characters)">
+            <mat-icon matPrefix>lock</mat-icon>
+            <mat-hint>At least 6 characters</mat-hint>
+            <mat-error *ngIf="!registerPassword && registerPassword">
+              Password is required
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Confirm Password</mat-label>
+            <input 
+              matInput 
+              [(ngModel)]="registerConfirmPassword" 
+              name="registerConfirmPassword"
+              type="password" 
+              required
+              [disabled]="isLoading"
+              placeholder="Confirm your password">
+            <mat-icon matPrefix>lock_reset</mat-icon>
+            <mat-error *ngIf="registerPassword !== registerConfirmPassword && registerConfirmPassword">
+              Passwords do not match
+            </mat-error>
+          </mat-form-field>
+
+          <!-- Terms and conditions -->
+          <div class="terms">
+            <mat-checkbox color="primary">
+              I agree to the 
+              <a href="#" class="terms-link">Terms of Service</a> 
+              and 
+              <a href="#" class="terms-link">Privacy Policy</a>
+            </mat-checkbox>
+          </div>
+
+          <!-- Submit button -->
+          <button 
+            mat-raised-button 
+            color="primary" 
+            type="submit"
+            [disabled]="isLoading"
+            class="auth-button full-width">
+            <div class="button-content">
+              <mat-spinner *ngIf="isLoading && activeTab === 'register'" diameter="20"></mat-spinner>
+              <span *ngIf="!(isLoading && activeTab === 'register')">Create Account</span>
+            </div>
+          </button>
+
+          <!-- Registration note -->
+          <p class="registration-note">
+            By registering, you agree to our terms and conditions. Your data is securely encrypted.
+          </p>
+        </form>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <!-- Footer -->
+  <div class="modal-footer">
+    <p *ngIf="activeTab === 'login'" class="switch-text">
+      Don't have an account? 
+      <button mat-button color="primary" (click)="activeTab = 'register'" class="switch-button">
+        Sign up
+      </button>
+    </p>
+    <p *ngIf="activeTab === 'register'" class="switch-text">
+      Already have an account? 
+      <button mat-button color="primary" (click)="activeTab = 'login'" class="switch-button">
+        Sign in
+      </button>
+    </p>
+  </div>
+</div>

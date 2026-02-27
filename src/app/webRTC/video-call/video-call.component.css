@@ -1,0 +1,926 @@
+/* Video Call Container - Base Styles */
+.video-call-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #1a1a1a;
+  color: white;
+  overflow: hidden;
+}
+
+/* Main Interface - FIXED SCROLLING */
+.main-interface {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  min-height: 0; /* CRITICAL: Allows flex child to scroll */
+}
+
+/* Login Prompt */
+.login-prompt {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  padding: 20px;
+}
+
+.login-card {
+  background: #2a2a2a;
+  color: white;
+  max-width: 400px;
+  width: 100%;
+  
+  mat-card-header {
+    margin-bottom: 20px;
+  }
+  
+  mat-card-title {
+    color: white;
+    font-size: 24px;
+  }
+  
+  mat-card-subtitle {
+    color: #aaa;
+  }
+  
+  mat-card-content p {
+    color: #ccc;
+    line-height: 1.6;
+  }
+  
+  mat-card-actions {
+    padding: 16px;
+    margin: 0;
+    
+    button {
+      width: 100%;
+      padding: 10px 0;
+      
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+/* User Status Bar */
+.user-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  
+  .user-icon {
+    color: #4caf50;
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+  }
+  
+  .user-name {
+    color: white;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  
+  .status-indicator {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+  }
+}
+
+.logout-btn {
+  color: #aaa;
+  
+  &:hover {
+    color: white;
+  }
+}
+
+/* Call Options */
+.call-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  width: 100%;
+}
+
+.option-card {
+  background: #2a2a2a;
+  color: white;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  
+  mat-card-header {
+    margin-bottom: 16px;
+  }
+  
+  mat-card-title {
+    color: white;
+    font-size: 18px;
+  }
+  
+  mat-card-subtitle {
+    color: #aaa;
+  }
+  
+  mat-card-content {
+    flex: 1;
+    
+    p {
+      color: #ccc;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+    
+    .room-info {
+      margin-top: 12px;
+      
+      small {
+        color: #888;
+        font-family: monospace;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+    }
+    
+    .search-user,
+    .join-room {
+      margin-top: 16px;
+    }
+    
+    .room-input {
+      width: 100%;
+      
+      ::ng-deep {
+        .mat-form-field-outline {
+          color: #444;
+        }
+        
+        .mat-form-field-label {
+          color: #aaa;
+        }
+        
+        input {
+          color: white;
+        }
+      }
+    }
+  }
+  
+  mat-card-actions {
+    padding: 16px;
+    margin: 0;
+    
+    button {
+      width: 100%;
+      
+      mat-icon {
+        margin-right: 8px;
+      }
+    }
+  }
+}
+
+/* Notifications Section */
+.notifications-section {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  flex-shrink: 0;
+  
+  h3 {
+    color: white;
+    margin-bottom: 16px;
+    font-size: 18px;
+  }
+  
+  .notification-card {
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid #ffc107;
+    
+    mat-card-header .mat-card-title {
+      color: #ffc107;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    mat-card-subtitle {
+      color: #ffc107;
+    }
+    
+    mat-card-content p {
+      color: #ffc107;
+    }
+    
+    mat-card-actions button mat-icon {
+      margin-right: 8px;
+    }
+  }
+}
+
+/* Incoming Call Alert */
+.incoming-call-alert {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.alert-content {
+  background: #2a2a2a;
+  border-radius: 16px;
+  padding: 40px;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+  animation: slideIn 0.3s ease;
+}
+
+.caller-info {
+  margin-bottom: 40px;
+  
+  .caller-icon {
+    font-size: 80px;
+    width: 80px;
+    height: 80px;
+    color: #4caf50;
+    margin-bottom: 16px;
+  }
+  
+  h2 {
+    color: white;
+    margin: 0 0 8px 0;
+    font-size: 24px;
+  }
+  
+  p {
+    color: #aaa;
+    margin: 0;
+  }
+}
+
+.ringing-animation {
+  position: relative;
+  height: 100px;
+  margin: 40px 0;
+  
+  .ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px solid #2196f3;
+    border-radius: 50%;
+    animation: ringPulse 1.5s infinite;
+    
+    &.ring-1 {
+      width: 80px;
+      height: 80px;
+      animation-delay: 0s;
+    }
+    
+    &.ring-2 {
+      width: 100px;
+      height: 100px;
+      animation-delay: 0.5s;
+    }
+    
+    &.ring-3 {
+      width: 120px;
+      height: 120px;
+      animation-delay: 1s;
+    }
+  }
+}
+
+.alert-actions {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  
+  button {
+    width: 70px;
+    height: 70px;
+    
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+  
+  .accept-btn {
+    background: #4caf50;
+    
+    &:hover {
+      background: #388e3c;
+    }
+  }
+  
+  .reject-btn {
+    background: #f44336;
+    
+    &:hover {
+      background: #d32f2f;
+    }
+  }
+}
+
+/* In-call Interface */
+.in-call-interface {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Video Grid */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  flex: 1;
+  padding: 20px;
+  min-height: 400px;
+  position: relative;
+  overflow: hidden;
+}
+
+.video-container {
+  position: relative;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  min-height: 200px;
+}
+
+.video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.video-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  color: white;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.video-status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  
+  .status-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    
+    &.muted {
+      color: #f44336;
+    }
+    
+    &.video-off {
+      color: #ff9800;
+    }
+    
+    &.screen-share {
+      color: #4caf50;
+    }
+  }
+  
+  .connection-status {
+    font-size: 12px;
+    
+    &.connected {
+      color: #4caf50;
+    }
+  }
+}
+
+/* Video Placeholder */
+.video-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  min-height: 200px;
+  
+  .placeholder-content {
+    text-align: center;
+    padding: 40px 20px;
+    
+    .placeholder-icon {
+      font-size: 80px;
+      width: 80px;
+      height: 80px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    
+    h3 {
+      color: #ccc;
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    
+    p {
+      color: #888;
+      margin: 0 0 20px 0;
+      line-height: 1.6;
+      
+      strong {
+        color: #4caf50;
+        font-family: monospace;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+    }
+  }
+}
+
+/* Ringing Overlay */
+.ringing-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.ringing-content {
+  text-align: center;
+  color: white;
+  
+  h3 {
+    margin: 20px 0 8px 0;
+    font-size: 24px;
+  }
+  
+  p {
+    color: #aaa;
+    margin-bottom: 30px;
+  }
+}
+
+/* Call Controls */
+.call-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.control-button {
+  position: relative;
+  
+  .participant-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ff9800;
+    color: white;
+    font-size: 12px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  &[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.end-call-button {
+  background: #f44336;
+  color: white;
+  
+  &:hover {
+    background: #d32f2f;
+  }
+}
+
+/* Call Info */
+.call-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin: 0 20px 20px;
+}
+
+.participants-info,
+.connection-status,
+.room-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #aaa;
+  
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+  
+  button {
+    margin-left: 4px;
+    color: #666;
+    
+    &:hover {
+      color: #aaa;
+    }
+    
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+.connection-status .status-dot {
+  color: #f44336;
+  
+  &.connected {
+    color: #4caf50;
+  }
+}
+
+/* Participants List */
+.participants-list {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 0 20px 20px;
+  animation: slideDown 0.3s ease;
+  
+  h4 {
+    color: white;
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+.participant-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  
+  &.local {
+    background: rgba(63, 81, 181, 0.1);
+  }
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+  
+  mat-icon.account_circle {
+    color: #666;
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+  
+  span {
+    color: white;
+    flex: 1;
+  }
+}
+
+.participant-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    
+    &.muted {
+      color: #f44336;
+    }
+    
+    &.video-off {
+      color: #ff9800;
+    }
+    
+    &.screen-sharing {
+      color: #4caf50;
+    }
+  }
+  
+  .status-indicator {
+    color: #4caf50;
+  }
+}
+
+/* Call Timer */
+.call-timer {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 16px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-size: 14px;
+  z-index: 5;
+  
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: #4caf50;
+  }
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ringPulse {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  70% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main-interface {
+    padding: 15px;
+    gap: 20px;
+  }
+  
+  .call-options {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .user-status-bar {
+    padding: 10px 15px;
+    
+    .user-name {
+      font-size: 14px;
+    }
+  }
+  
+  .option-card {
+    mat-card-title {
+      font-size: 16px;
+    }
+    
+    mat-card-content p {
+      font-size: 14px;
+    }
+  }
+  
+  .video-grid {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 10px;
+    min-height: 300px;
+  }
+  
+  .video-container {
+    min-height: 200px;
+  }
+  
+  .call-controls {
+    gap: 10px;
+    padding: 15px 10px;
+    
+    button {
+      width: 50px;
+      height: 50px;
+      
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+  
+  .call-info {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    margin: 10px;
+    
+    > div {
+      justify-content: center;
+      width: 100%;
+    }
+  }
+  
+  .incoming-call-alert .alert-content {
+    padding: 30px 20px;
+    margin: 20px;
+    
+    .alert-actions {
+      gap: 20px;
+      
+      button {
+        width: 60px;
+        height: 60px;
+        
+        mat-icon {
+          font-size: 28px;
+        }
+      }
+    }
+  }
+  
+  .call-timer {
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .participants-list {
+    margin: 10px;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-interface {
+    padding: 10px;
+    gap: 15px;
+  }
+  
+  .video-container {
+    min-height: 180px;
+  }
+  
+  .call-controls {
+    gap: 8px;
+    
+    button {
+      width: 45px;
+      height: 45px;
+    }
+  }
+  
+  .incoming-call-alert .alert-content {
+    padding: 25px 15px;
+    
+    .caller-info h2 {
+      font-size: 20px;
+    }
+    
+    .alert-actions {
+      gap: 15px;
+      
+      button {
+        width: 55px;
+        height: 55px;
+      }
+    }
+  }
+}
+
+/* Landscape Mode */
+@media (max-height: 600px) and (orientation: landscape) {
+  .main-interface {
+    padding: 10px;
+  }
+  
+  .video-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .video-container {
+    min-height: 150px;
+  }
+  
+  .call-controls {
+    padding: 10px;
+    
+    button {
+      width: 45px;
+      height: 45px;
+    }
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+}

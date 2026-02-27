@@ -29,18 +29,14 @@ import { WorkspaceComponent } from './workspace/workspace.component';
 import { CdkDrag, CdkDragMove, CdkDropList } from '@angular/cdk/drag-drop';
 import { debounceTime, fromEvent } from 'rxjs';
 import { CommonModule, DatePipe } from '@angular/common';
-// interface CdkDragMoveCall<T = any> {
-//   source: CdkDrag<T>;
-//   pointerPosition: { x: number; y: number; };
-//   event: MouseEvent | TouchEvent;
-//   distance: { x: number; y: number; };
-//   delta: { x: 0 | 1 | -1; y: 0 | 1 | -1; };
-// }
+import { VideoCallComponent } from './webRTC/video-call/video-call.component';
+import { ObjectDetectionComponent } from './webRTC/object-detection/object-detection.component';
 @Component({
   selector: 'app-root',
   imports: [InputBoxComponent, CommonModule, ChatbotComponent, SidebarComponent, MatSidenavModule, McpClientComponent,
-    MatButtonModule, MatIconModule, MatToolbarModule, MatListModule, ElicitationComponent, 
-    MatProgressBarModule, MatProgressSpinnerModule, WorkspaceComponent, CdkDropList, CdkDrag, DatePipe],
+    MatButtonModule, MatIconModule, MatToolbarModule, MatListModule, ElicitationComponent, VideoCallComponent,
+    MatProgressBarModule, MatProgressSpinnerModule, WorkspaceComponent, CdkDropList, CdkDrag, DatePipe,
+    ObjectDetectionComponent],
   standalone: true,
   providers: [McpService, McpElicitationService],
   // templateUrl: './app.component.html',
@@ -52,6 +48,8 @@ import { CommonModule, DatePipe } from '@angular/common';
 })
 export class AppComponent implements OnDestroy {
   @ViewChild('chatComponent') chatComponent!: ChatbotComponent;
+  @ViewChild('videoCall') videoCallComponent!: VideoCallComponent;
+  @ViewChild('objectDetection') objectDetectionComponent!: ObjectDetectionComponent;
   messages: any[] = [];
   title = 'AI powered chatbot';
   // isSidebarOpen = false;
@@ -99,6 +97,11 @@ export class AppComponent implements OnDestroy {
   notifications: any[] = [];
   unreadNotificationsCount: number = 0;
   showNotificationsModal: boolean = false;
+  showVideoCall: boolean = false;
+  roomId: string = 'default-room';
+  userId: string = '';
+
+  objectDetectionState: boolean = false;
   constructor(private mcpService: McpService, private openAIService: OpenAiService, 
     private storageService: StorageService, private toolFormatter: ToolformatterService,
     private mcpElicitationService: McpElicitationService, private cdr: ChangeDetectorRef) {
@@ -726,4 +729,33 @@ onResizeDrag(event: CdkDragMove): void {
         default: return '';
       }
     }
+
+  toggleVideoCall() {
+    this.showVideoCall = !this.showVideoCall;
+    
+    if (this.showVideoCall && this.videoCallComponent) {
+      // Generate unique room ID
+      this.roomId = "";
+      // You can get user info from your auth service
+      this.userId = "";
+      
+      // Initialize video call with room and user IDs
+      // You'll need to add these as inputs to the video call component
+      // this.videoCallComponent.roomId = this.roomId;
+      // this.videoCallComponent.userId = this.userId;
+      // this.cdr.detectChanges();
+    }
+  }
+
+  toggleObjectDetection() {
+    this.objectDetectionState = !this.objectDetectionState;
+  }
+
+  endVideoProcessing(){
+    this.objectDetectionState = false;
+  }
+
+  onCallEnded(){
+    this.showVideoCall = false;
+  }
 }

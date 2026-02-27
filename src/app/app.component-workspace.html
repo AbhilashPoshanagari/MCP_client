@@ -76,6 +76,23 @@
             </div>
           }
 
+          <button mat-icon-button
+                  matTooltip="Video Call"
+                  color="primary" 
+                  (click)="toggleVideoCall()"
+                  class="video-call-button"
+                  title="Start Video Call">
+            <mat-icon>video_call</mat-icon>
+          </button>
+          <button mat-icon-button 
+                  matTooltip="Object Detection"
+                  color="green" 
+                  (click)="toggleObjectDetection()"
+                  class="video-call-button"
+                  title="Start Object Detection">
+            <mat-icon>video_call</mat-icon>
+          </button>
+
           <app-mcp-client 
             (tools)="toolsList($event)" 
             (sendOpenAiKey)="InitializeLLM($event)"
@@ -203,4 +220,70 @@
       </div>
     </div>
   }
+
+  <!-- Add video call overlay/modal -->
+<!-- @if (showVideoCall) {
+  <div class="video-call-overlay" (click)="toggleVideoCall()">
+    <div class="video-call-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Video Call</h2>
+        <button mat-icon-button (click)="toggleVideoCall()" class="close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="modal-body">
+        {{userId}}
+        <app-video-call 
+          #videoCall
+          [roomId]="roomId"
+          [userId]="userId"
+          (callEnded)="showVideoCall = false">
+        </app-video-call>
+      </div>
+    </div>
+  </div>
+} -->
+
+<!-- Replace your existing video call modal section with this: -->
+@if (showVideoCall) {
+  <div class="video-call-overlay">
+    <div class="video-call-modal">
+      <div class="modal-header">
+        <h2>Video Call</h2>
+        <button mat-icon-button (click)="toggleVideoCall()" class="close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="modal-body">
+        <app-video-call 
+          #videoCall
+          [roomId]="roomId"
+          [userId]="userId"
+          (callEnded)="onCallEnded()">
+        </app-video-call>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Replace your existing video call modal section with this: -->
+@if (objectDetectionState) {
+  <div class="video-call-overlay">
+    <div class="video-call-modal">
+      <div class="modal-header">
+        <h2>Object Detection</h2>
+        <button mat-icon-button (click)="toggleObjectDetection()" class="close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="modal-body">
+        <app-object-detection 
+          #objectDetection
+          (endVideoProcessing)="endVideoProcessing()">
+        </app-object-detection>
+      </div>
+    </div>
+  </div>
+}
+
 </div>

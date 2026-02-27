@@ -1,0 +1,211 @@
+/* Video Call Container - Base Styles */
+.video-call-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #1a1a1a;
+  color: white;
+  overflow: hidden;
+}
+
+/* Main Interface - FIXED SCROLLING */
+.main-interface {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  min-height: 0; /* CRITICAL: Allows flex child to scroll */
+}
+
+/* In-call Interface */
+.in-call-interface {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* Video Grid */
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  flex: 1;
+  padding: 20px;
+  min-height: 400px;
+  position: relative;
+  overflow: hidden;
+}
+
+.video-container {
+  position: relative;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  min-height: 200px;
+}
+
+.video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.video-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  color: white;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.video-status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  
+  .status-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    
+    &.muted {
+      color: #f44336;
+    }
+    
+    &.video-off {
+      color: #ff9800;
+    }
+    
+    &.screen-share {
+      color: #4caf50;
+    }
+  }
+  
+  .connection-status {
+    font-size: 12px;
+    
+    &.connected {
+      color: #4caf50;
+    }
+  }
+}
+
+
+.controls {
+  margin-top: 20px;
+}
+
+.controls button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.controls button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.controls button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main-interface {
+    padding: 15px;
+    gap: 20px;
+  }
+  
+  .video-grid {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    gap: 10px;
+    min-height: 300px;
+  }
+  
+  .video-container {
+    min-height: 200px;
+  }
+  
+}
+
+@media (max-width: 480px) {
+  .main-interface {
+    padding: 10px;
+    gap: 15px;
+  }
+  
+  .video-container {
+    min-height: 180px;
+  }
+  
+  .incoming-call-alert .alert-content {
+    padding: 25px 15px;
+    
+    .caller-info h2 {
+      font-size: 20px;
+    }
+    
+  }
+}
+
+/* Landscape Mode */
+@media (max-height: 600px) and (orientation: landscape) {
+  .main-interface {
+    padding: 10px;
+  }
+  
+  .video-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .video-container {
+    min-height: 150px;
+  }
+  
+  .call-controls {
+    padding: 10px;
+    
+    button {
+      width: 45px;
+      height: 45px;
+    }
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+}

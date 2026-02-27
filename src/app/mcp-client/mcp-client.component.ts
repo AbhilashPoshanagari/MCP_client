@@ -204,7 +204,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-
+import { AuthService } from '../services/auth.service';
 interface ElicitResponse {
   action: 'accept' | 'decline' | 'cancel';
   data?: any;
@@ -250,6 +250,7 @@ export class McpClientComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   readonly mcpServer = model('');
   readonly openAiKey = model('');
+  readonly mediaServer = model('');
   readonly dialog = inject(MatDialog);
   
   mcp_props = {
@@ -271,6 +272,16 @@ export class McpClientComponent implements OnInit, OnDestroy {
     domain: this.openAiKey() || '',
     page: 'open_ai_token'
   };
+
+  media_props = {
+    title: 'Connect to Media Server',
+    message: 'Please enter the Media Server URL to connect.',
+    placeholder: 'Enter Media Server URL here',
+    confirmText: 'Connect',
+    cancelText: 'Cancel',
+    domain: this.mediaServer() || '',
+    page: 'media_server'
+  };
   // Add notification handling in MCP client
   @Output() notificationsChange = new EventEmitter<any[]>();
   @Output() unreadCountChange = new EventEmitter<number>();
@@ -285,7 +296,8 @@ export class McpClientComponent implements OnInit, OnDestroy {
     private mcpService: McpService, 
     private storageService: StorageService,
     private toolFormatter: ToolformatterService,
-    private elicitationService: McpElicitationService
+    private elicitationService: McpElicitationService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -355,6 +367,10 @@ export class McpClientComponent implements OnInit, OnDestroy {
     this.openDomainDialog(this.mcp_props);
   }
 
+  openMediaServerConfigDialog(): void {
+    this.openDomainDialog(this.media_props);
+  }
+
   closeMCPConfigDialog(): void {
     this.showMCPConfigDialog = false;
   }
@@ -375,13 +391,15 @@ export class McpClientComponent implements OnInit, OnDestroy {
   loadSavedConfig(): void {
     const savedMcpServer = this.storageService.getValueFromKey('mcp_server') || '';
     const savedOpenAiKey = this.storageService.getValueFromKey('open_ai_token') || '';
-    
+    const savedMediaServer = this.storageService.getValueFromKey('media_server') || '';
+
     this.mcpServerUrl = savedMcpServer;
     this.openAiKeyValue = savedOpenAiKey;
+    // this.mediaServerUrl = savedMediaServer;
     
     this.mcpServer.set(savedMcpServer);
     this.openAiKey.set(savedOpenAiKey);
-    
+    this.mediaServer.set(savedMediaServer);
     if (savedOpenAiKey) {
       this.sendOpenAiKey.emit(savedOpenAiKey);
     }
@@ -548,8 +566,13 @@ export class McpClientComponent implements OnInit, OnDestroy {
           this.storageService.saveValuesInKey('open_ai_token', result.server);
           this.sendOpenAiKey.emit(result.server);
           this.addNotification('success', 'OpenAI Key Updated', 'API key has been updated');
-        }
+        } else if (result.page === 'media_server') {
+          this.mediaServer.set(result.server);
+          this.storageService.saveValuesInKey('media_server', result.server);
+          this.authService.setApiUrl();
+          this.addNotification('success', 'Media Server Updated', 'Media server URL has been updated');
       }
+    }
     });
   }
 

@@ -51,6 +51,11 @@
               (click)="openai_props.domain= openAiKey();toggleOpenAiConfig(openai_props)">
         <mat-icon>key</mat-icon>
       </button>
+        <button mat-icon-button 
+              matTooltip="media server config"
+              (click)="media_props.domain= mediaServer();openMediaServerConfigDialog()">
+        <mat-icon>dns</mat-icon>
+      </button>
     </div>
   }
   

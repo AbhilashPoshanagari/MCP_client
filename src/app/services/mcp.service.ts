@@ -129,7 +129,9 @@ export class McpService {
           elicitation: {
             form: {}
           },
-          sampling: {}    
+          sampling: {
+            tools: {}
+          }    
         },
       });
 
@@ -501,10 +503,19 @@ samplingRequestHandler(client: Client): void{
     console.log(`\n[Sampling] Collected ${messageTemplates.length} messages`);
 
       return new Promise(async (resolve, reject) => {
+      const toolChoice: { mode: "auto" | "required" | "none" } =
+        typeof request.params.toolChoice === "string"
+          ? { mode: request.params.toolChoice }
+          : request.params.toolChoice?.mode
+            ? { mode: request.params.toolChoice.mode }
+            : { mode: "auto" };
+        console.log("Tools received : ", request.params.tools);
         let options = {
           userInput: userInput, 
           messages: messageTemplates,
-          model_preference: request.params.modelPreferences?.hints?.[0]?.name
+          model_preference: request.params.modelPreferences?.hints?.[0]?.name,
+          tools: request.params.tools || [],
+          tool_choice: toolChoice
         }
         const response = await this.openAISampling(options)
         console.log("Sampleing front-end response : ", response)
@@ -520,19 +531,30 @@ samplingRequestHandler(client: Client): void{
 }
 
 
-async openAISampling(options: { userInput: string, messages: BaseMessagePromptTemplate[], model_preference?: string }) {
+async openAISampling(options: { userInput: string, 
+    messages: BaseMessagePromptTemplate[],
+    tools: Array<any>, tool_choice: string | {mode: "auto" | "required" | "none"},
+    model_preference?: string,
+ }) {
   try {
     const storedToken = this.storageService.getValueFromKey('open_ai_token') || '';
     let open_ai_model = this.openai_service.getOpenAiClient({
       openAIKey: storedToken, 
       model: options.model_preference || "gpt-4o-mini"
     });
-
-    // Create the prompt template from the collected messages
-    const prompt = ChatPromptTemplate.fromMessages(options.messages);
-    console.log("prompt : ", prompt);
-    const llm_runnable = RunnableSequence.from([prompt, open_ai_model, new StringOutputParser()]);
-    
+    let llm_runnable = null;
+          // Create the prompt template from the collected messages
+      const prompt = ChatPromptTemplate.fromMessages(options.messages);
+      console.log("prompt : ", prompt);
+    if(options.tools.length > 0){
+      let open_ai_with_tools = open_ai_model.bindTools(
+          options.tools,
+          {tool_choice: options.tool_choice}
+        );
+      llm_runnable = RunnableSequence.from([prompt, open_ai_with_tools, new StringOutputParser()]);
+    }else{
+      llm_runnable = RunnableSequence.from([prompt, open_ai_model, new StringOutputParser()]);
+    }
     const llm_response = await llm_runnable.invoke({input: options.userInput});
     return llm_response;
   } catch (error) {
@@ -649,12 +671,12 @@ private parseSchemaToFields(schema: any): any[] {
     this.resourceSubject.next(resources.resources)
   }
 
-readResource(resourceLink: ResourceLink) {
+async readResource(resourceLink: ResourceLink) {
     if (!this.client) {
       throw new Error('Client not connected');
     }
     // this.client.readResource(resourceLink)
-    return this.client.request({
+    return await this.client.request({
       method: 'resources/read',
       params: {
         resourceLink

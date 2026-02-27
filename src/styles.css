@@ -1,5 +1,28 @@
 
-html, body { height: 100%; }
+/* html, body { height: 100%; } */
+
+/* Ensure proper box-sizing */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Fix for Angular Material dialogs */
+.cdk-global-overlay-wrapper {
+  z-index: 2000 !important;
+}
+
+/* Fix video elements */
+video {
+  display: block;
+  background: #000;
+}
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 .mat-mdc-menu-content {
   background-color: #eee;

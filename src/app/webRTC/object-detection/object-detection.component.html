@@ -1,0 +1,38 @@
+<div class="video-call-container" [class.in-call]="objectDetectionState.processing">
+  <!-- In-call Interface -->
+   <!-- @if(objectDetectionState.processing) { -->
+  <div class="in-call-interface">
+
+    <!-- Video Grid -->
+    <div class="video-grid">
+      <!-- Local Video -->
+      <div class="video-container local-video">
+        <video #localVideo autoplay muted playsinline></video>
+      </div>
+
+      <!-- Remote Videos -->
+       @if(isDetecting) {
+      <div class="video-container remote-video">
+        <video #remoteVideo autoplay playsinline></video>
+      </div>
+    }
+    </div>
+  </div>
+<!-- } -->
+<div class="controls">
+    <button (click)="startCamera()" [disabled]="localStream !== null">
+      Start Camera {{localStream}}
+    </button>
+    
+    <button (click)="startDetection()" 
+            [disabled]="isDetecting">
+      Start Object Detection
+    </button>
+    
+    <button (click)="stopDetection()" 
+            [disabled]="!isDetecting">
+      Stop Detection
+    </button>
+  </div>
+
+</div>

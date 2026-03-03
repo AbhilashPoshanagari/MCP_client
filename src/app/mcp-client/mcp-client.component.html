@@ -56,6 +56,11 @@
               (click)="media_props.domain= mediaServer();openMediaServerConfigDialog()">
         <mat-icon>dns</mat-icon>
       </button>
+      <button mat-icon-button 
+              matTooltip="web socket config"
+              (click)="web_socket_props.domain= webSocketServer();openWebSocketServerConfigDialog()">
+        <mat-icon>cast_connected</mat-icon>
+      </button>
     </div>
   }
   

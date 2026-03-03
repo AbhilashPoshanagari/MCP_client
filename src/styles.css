@@ -17,6 +17,9 @@ html, body {
 .cdk-global-overlay-wrapper {
   z-index: 2000 !important;
 }
+.cdk-overlay-container {
+  z-index: 5000 !important;
+}
 
 /* Fix video elements */
 video {

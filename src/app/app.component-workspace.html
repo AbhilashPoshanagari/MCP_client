@@ -82,7 +82,7 @@
                   (click)="toggleVideoCall()"
                   class="video-call-button"
                   title="Start Video Call">
-            <mat-icon>video_call</mat-icon>
+            <mat-icon>settings_phone</mat-icon>
           </button>
           <button mat-icon-button 
                   matTooltip="Object Detection"
@@ -220,29 +220,6 @@
       </div>
     </div>
   }
-
-  <!-- Add video call overlay/modal -->
-<!-- @if (showVideoCall) {
-  <div class="video-call-overlay" (click)="toggleVideoCall()">
-    <div class="video-call-modal" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>Video Call</h2>
-        <button mat-icon-button (click)="toggleVideoCall()" class="close-button">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-      <div class="modal-body">
-        {{userId}}
-        <app-video-call 
-          #videoCall
-          [roomId]="roomId"
-          [userId]="userId"
-          (callEnded)="showVideoCall = false">
-        </app-video-call>
-      </div>
-    </div>
-  </div>
-} -->
 
 <!-- Replace your existing video call modal section with this: -->
 @if (showVideoCall) {

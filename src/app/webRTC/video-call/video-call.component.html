@@ -18,135 +18,105 @@
     </mat-card>
   </div>
 
-  <!-- Main Interface (when logged in) -->
+  <!-- Main Interface (when logged in but not in call) -->
   <div *ngIf="currentUser && !callState.isInCall" class="main-interface">
-    <!-- User Status -->
-    <div class="user-status-bar">
+    <!-- Top Bar -->
+    <div class="top-bar">
       <div class="user-info">
         <mat-icon class="user-icon">account_circle</mat-icon>
-        <span class="user-name">{{ currentUser.username || userId }}</span>
+        <span class="welcome-text">
+          Welcome, {{ currentUser?.username }} -- {{ currentUser?.id }}
+        </span>
         <span class="status-indicator online">● Online</span>
       </div>
-      <button mat-icon-button (click)="logout()" class="logout-btn" matTooltip="Logout">
+      <button mat-button color="warn" (click)="logout()">
         <mat-icon>logout</mat-icon>
+        Logout
       </button>
     </div>
 
-    <!-- Call Options -->
-    <div class="call-options">
-      <!-- Quick Start Call -->
-      <mat-card class="option-card">
+    <!-- Call Controls -->
+    <div class="call-controls-section">
+      <mat-card class="call-card">
         <mat-card-header>
-          <mat-card-title>Quick Start Call</mat-card-title>
-          <mat-card-subtitle>Start a call and share the link</mat-card-subtitle>
+          <mat-card-title>Start a Video Call</mat-card-title>
+          <mat-card-subtitle>Enter the username of the person you want to call</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <p>Create a new call room and invite others by sharing the link.</p>
-          <div class="room-info" *ngIf="roomId">
-            <small>Room ID: {{ roomId }}</small>
-          </div>
-        </mat-card-content>
-        <mat-card-actions>
-          <button mat-raised-button color="primary" (click)="startCall()" class="start-call-btn">
-            <mat-icon>video_call</mat-icon>
-            Start New Call
-          </button>
-        </mat-card-actions>
-      </mat-card>
-
-      <!-- Call Specific User -->
-      <mat-card class="option-card">
-        <mat-card-header>
-          <mat-card-title>Call a Contact</mat-card-title>
-          <mat-card-subtitle>Call a specific user</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <p>Search and call a specific user from your contacts.</p>
-          <div class="search-user">
-            <button mat-raised-button (click)="searchUserToCall()">
-              <mat-icon>search</mat-icon>
-              Search User
-            </button>
-          </div>
-        </mat-card-content>
-        <mat-card-actions>
-          <button mat-raised-button color="accent" (click)="openContacts()">
-            <mat-icon>contacts</mat-icon>
-            View Contacts
-          </button>
-        </mat-card-actions>
-      </mat-card>
-
-      <!-- Join Existing Call -->
-      <mat-card class="option-card">
-        <mat-card-header>
-          <mat-card-title>Join a Call</mat-card-title>
-          <mat-card-subtitle>Enter a room ID</mat-card-subtitle>
-        </mat-card-header>
-        <mat-card-content>
-          <div class="join-room">
-            <mat-form-field appearance="outline" class="room-input">
-              <mat-label>Room ID</mat-label>
-              <input matInput [(ngModel)]="roomId" placeholder="Enter room ID">
+          <div class="call-input">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Username to call</mat-label>
+              <input 
+                matInput 
+                [(ngModel)]="targetUserName" 
+                placeholder="Enter username"
+                (keyup.enter)="startCall()">
+              <mat-icon matSuffix>person</mat-icon>
             </mat-form-field>
           </div>
         </mat-card-content>
         <mat-card-actions>
-          <button mat-raised-button color="primary" (click)="joinRoom()">
-            <mat-icon>meeting_room</mat-icon>
-            Join Room
+          <button 
+            mat-raised-button 
+            color="primary" 
+            (click)="startCall()" 
+            [disabled]="!targetUserName"
+            class="start-call-btn">
+            <mat-icon>video_call</mat-icon>
+            Request Video Call
           </button>
         </mat-card-actions>
       </mat-card>
-    </div>
 
-    <!-- Recent Calls / Notifications -->
-    <div class="notifications-section" *ngIf="hasNotifications">
-      <h3>Recent Activity</h3>
-      <mat-card class="notification-card" *ngIf="incomingCallInfo">
-        <mat-card-header>
-          <mat-card-title>
-            <mat-icon>call</mat-icon>
-            Incoming Call
-          </mat-card-title>
-          <mat-card-subtitle>From: {{ incomingCallInfo.senderName }}</mat-card-subtitle>
-        </mat-card-header>
+      <!-- Room Info -->
+      <mat-card class="info-card">
         <mat-card-content>
-          <p>You have an incoming call. Would you like to answer?</p>
+          <div class="room-info">
+            <mat-icon>meeting_room</mat-icon>
+            <span>Your Room ID: <strong>{{ roomId }}</strong></span>
+            <button mat-icon-button (click)="copyRoomId()" matTooltip="Copy Room ID">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
         </mat-card-content>
-        <mat-card-actions>
-          <button mat-button color="primary" (click)="acceptIncomingCall(incomingCallInfo.senderId)">
-            <mat-icon>call</mat-icon>
-            Accept
-          </button>
-          <button mat-button color="warn" (click)="rejectIncomingCall(incomingCallInfo.senderId)">
-            <mat-icon>call_end</mat-icon>
-            Decline
-          </button>
-        </mat-card-actions>
       </mat-card>
     </div>
   </div>
 
-  <!-- Incoming Call Ringing Alert -->
+  <!-- Incoming Call Alert (Full Screen Overlay) -->
   <div *ngIf="incomingCallInfo && !callState.isInCall" class="incoming-call-alert">
     <div class="alert-overlay">
       <div class="alert-content">
         <div class="caller-info">
-          <mat-icon class="caller-icon">account_circle</mat-icon>
+          <div class="caller-avatar">
+            <mat-icon class="caller-icon">account_circle</mat-icon>
+          </div>
           <h2>{{ incomingCallInfo.senderName }}</h2>
-          <p>is calling you...</p>
+          <p class="calling-text">is calling you...</p>
         </div>
+        
+        <!-- Ringing Animation -->
         <div class="ringing-animation">
           <div class="ring ring-1"></div>
           <div class="ring ring-2"></div>
           <div class="ring ring-3"></div>
         </div>
+
         <div class="alert-actions">
-          <button mat-fab color="primary" (click)="acceptIncomingCall(incomingCallInfo.senderId)" class="accept-btn">
+          <button 
+            mat-fab 
+            color="primary" 
+            (click)="acceptIncomingCall(incomingCallInfo.senderId)" 
+            class="accept-btn"
+            matTooltip="Accept Call">
             <mat-icon>call</mat-icon>
           </button>
-          <button mat-fab color="warn" (click)="rejectIncomingCall(incomingCallInfo.senderId)" class="reject-btn">
+          <button 
+            mat-fab 
+            color="warn" 
+            (click)="rejectIncomingCall(incomingCallInfo.senderId)" 
+            class="reject-btn"
+            matTooltip="Decline Call">
             <mat-icon>call_end</mat-icon>
           </button>
         </div>
@@ -156,15 +126,18 @@
 
   <!-- In-call Interface -->
   <div *ngIf="callState.isInCall" class="in-call-interface">
-    
     <!-- Ringing Indicator (for outgoing calls) -->
     <div *ngIf="callState.isRinging && !callState.isCallActive" class="ringing-overlay">
       <div class="ringing-content">
-        <mat-spinner diameter="40"></mat-spinner>
-        <h3>Calling {{ callState.users[0]?.name || 'user' }}...</h3>
-        <p>Waiting for response</p>
+        <mat-spinner diameter="50"></mat-spinner>
+        <h3>Calling {{ targetUserName }}...</h3>
+        <p>Waiting for answer</p>
         <div class="ringing-controls">
-          <button mat-fab color="warn" (click)="endCall()" matTooltip="Cancel Call">
+          <button 
+            mat-fab 
+            color="warn" 
+            (click)="endCall()" 
+            matTooltip="Cancel Call">
             <mat-icon>call_end</mat-icon>
           </button>
         </div>
@@ -173,34 +146,35 @@
 
     <!-- Video Grid -->
     <div class="video-grid">
-      <!-- Local Video -->
-      <div class="video-container local-video" [class.minimized]="callState.users.length > 0">
-        <video #localVideo autoplay muted playsinline (loadedmetadata)="localVideo.play()"></video>
+      <!-- Local Video (minimized when remote exists) -->
+      <div class="video-container local-video" [class.minimized]="callState.isCallActive">
+        <video 
+          #localVideo 
+          autoplay 
+          muted 
+          playsinline 
+          (loadedmetadata)="playVideo(localVideo)">
+        </video>
         <div class="video-overlay">
-          <span class="user-name">{{ currentUser?.username || userId }} (You)</span>
+          <span class="user-name">{{ currentUser?.username }} (You)</span>
           <div class="video-status">
             <mat-icon *ngIf="callState.isMuted" class="status-icon muted" matTooltip="Mic Muted">mic_off</mat-icon>
             <mat-icon *ngIf="!callState.isVideoOn" class="status-icon video-off" matTooltip="Video Off">videocam_off</mat-icon>
-            <mat-icon *ngIf="callState.isScreenSharing" class="status-icon screen-share" matTooltip="Screen Sharing">screen_share</mat-icon>
           </div>
         </div>
       </div>
 
-      <!-- Remote Videos -->
-      <div *ngFor="let user of callState.users" class="video-container remote-video">
-        <!-- <video #remoteVideo autoplay playsinline></video> -->
-        <video #remoteVideo
-              [attr.data-user-id]="user.id"
-              autoplay
-              playsinline
-              (loadedmetadata)="playVideo(remoteVideo)">
+      <!-- Remote Video -->
+      <div class="video-container remote-video">
+        <video 
+          #remoteVideo
+          autoplay
+          playsinline
+          (loadedmetadata)="playVideo(remoteVideo)">
         </video>
-
         <div class="video-overlay">
-          <span class="user-name">{{ user.name }}</span>
+          <span class="user-name">{{ targetUserName }}</span>
           <div class="video-status">
-            <mat-icon *ngIf="user.isMuted" class="status-icon muted" matTooltip="User Muted">mic_off</mat-icon>
-            <mat-icon *ngIf="user.isSharingScreen" class="status-icon screen-share" matTooltip="Screen Sharing">screen_share</mat-icon>
             <span class="connection-status" [class.connected]="callState.isCallActive">
               {{ callState.isCallActive ? '● Connected' : '● Connecting...' }}
             </span>
@@ -208,141 +182,49 @@
         </div>
       </div>
 
-      <!-- Waiting for participants -->
-      <div *ngIf="!callState.isCallActive && callState.isInCall && !callState.isRinging" class="video-placeholder">
-        <div class="placeholder-content">
-          <mat-icon class="placeholder-icon">person_search</mat-icon>
-          <h3>Waiting for participants to join...</h3>
-          <p>Share this room ID with others: <strong>{{ roomId }}</strong></p>
-          <button mat-raised-button (click)="copyRoomId()" class="copy-btn">
-            <mat-icon>content_copy</mat-icon>
-            Copy Room ID
-          </button>
-        </div>
-      </div>
-
-      <!-- No participants joined yet -->
-      <div *ngIf="callState.isCallActive && callState.users.length === 0" class="video-placeholder">
-        <div class="placeholder-content">
-          <mat-icon class="placeholder-icon">people_outline</mat-icon>
-          <h3>No participants yet</h3>
-          <p>Others can join using room ID: <strong>{{ roomId }}</strong></p>
+      <!-- Waiting for connection -->
+      <div *ngIf="!callState.isCallActive && !callState.isRinging" class="connecting-overlay">
+        <div class="connecting-content">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Establishing connection...</p>
         </div>
       </div>
     </div>
 
     <!-- Call Controls -->
-    <div class="call-controls">
-      <button mat-fab 
-              [color]="callState.isMuted ? 'warn' : 'primary'"
-              (click)="toggleMute()"
-              class="control-button"
-              matTooltip="{{ callState.isMuted ? 'Unmute' : 'Mute' }}">
+    <div class="call-controls-bar">
+      <button 
+        mat-fab 
+        [color]="callState.isMuted ? 'warn' : 'primary'"
+        (click)="toggleMute()"
+        class="control-btn"
+        matTooltip="{{ callState.isMuted ? 'Unmute' : 'Mute' }}">
         <mat-icon>{{ callState.isMuted ? 'mic_off' : 'mic' }}</mat-icon>
       </button>
 
-      <button mat-fab 
-              [color]="callState.isVideoOn ? 'primary' : 'warn'"
-              (click)="toggleVideo()"
-              class="control-button"
-              matTooltip="{{ callState.isVideoOn ? 'Turn off video' : 'Turn on video' }}">
+      <button 
+        mat-fab 
+        [color]="callState.isVideoOn ? 'primary' : 'warn'"
+        (click)="toggleVideo()"
+        class="control-btn"
+        matTooltip="{{ callState.isVideoOn ? 'Turn off video' : 'Turn on video' }}">
         <mat-icon>{{ callState.isVideoOn ? 'videocam' : 'videocam_off' }}</mat-icon>
       </button>
 
-      <button mat-fab 
-              [color]="callState.isScreenSharing ? 'accent' : 'primary'"
-              (click)="toggleScreenShare()"
-              class="control-button"
-              matTooltip="{{ callState.isScreenSharing ? 'Stop sharing' : 'Share screen' }}"
-              [disabled]="!callState.isCallActive">
-        <mat-icon>{{ callState.isScreenSharing ? 'stop_screen_share' : 'screen_share' }}</mat-icon>
-      </button>
-
-      <!-- Participant List Toggle -->
-      <button mat-fab 
-              color="primary"
-              (click)="toggleParticipantList()"
-              class="control-button"
-              matTooltip="Participants">
-        <mat-icon>people</mat-icon>
-        <span class="participant-count" *ngIf="callState.users.length > 0">
-          {{ callState.users.length }}
-        </span>
-      </button>
-
-      <button mat-fab color="warn" (click)="endCall()" class="end-call-button" matTooltip="End Call">
+      <button 
+        mat-fab 
+        color="warn" 
+        (click)="endCall()" 
+        class="end-call-btn"
+        matTooltip="End Call">
         <mat-icon>call_end</mat-icon>
       </button>
     </div>
 
-    <!-- Call Info -->
-    <div class="call-info">
-      <div class="participants-info">
-        <mat-icon>people</mat-icon>
-        <span>{{ callState.users.length + 1 }} participant(s)</span>
-        <button mat-icon-button (click)="showParticipantList = !showParticipantList">
-          <mat-icon>{{ showParticipantList ? 'expand_less' : 'expand_more' }}</mat-icon>
-        </button>
-      </div>
-      
-      <div class="connection-status">
-        <mat-icon [class.connected]="callState.isCallActive" class="status-dot">
-          {{ callState.isCallActive ? 'circle' : 'circle' }}
-        </mat-icon>
-        <span>{{ callState.isCallActive ? 'Connected' : 'Connecting...' }}</span>
-      </div>
-      
-      <div class="room-info">
-        <mat-icon>meeting_room</mat-icon>
-        <span>Room: {{ roomId }}</span>
-        <button mat-icon-button (click)="copyRoomId()" matTooltip="Copy Room ID">
-          <mat-icon>content_copy</mat-icon>
-        </button>
-      </div>
-    </div>
-
-    <!-- Participants List (Expandable) -->
-    <div *ngIf="showParticipantList" class="participants-list">
-      <h4>Participants</h4>
-      <div class="participant-item local">
-        <mat-icon>account_circle</mat-icon>
-        <span>{{ currentUser?.username || userId }} (You)</span>
-        <div class="participant-status">
-          <mat-icon *ngIf="callState.isMuted" class="muted">mic_off</mat-icon>
-          <mat-icon *ngIf="!callState.isVideoOn" class="video-off">videocam_off</mat-icon>
-          <mat-icon *ngIf="callState.isScreenSharing" class="screen-sharing">screen_share</mat-icon>
-        </div>
-      </div>
-      
-      <div *ngFor="let user of callState.users" class="participant-item">
-        <mat-icon>account_circle</mat-icon>
-        <span>{{ user.name }}</span>
-        <div class="participant-status">
-          <mat-icon *ngIf="user.isMuted" class="muted">mic_off</mat-icon>
-          <mat-icon *ngIf="user.isSharingScreen" class="screen-sharing">screen_share</mat-icon>
-          <span class="status-indicator connected">●</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Call Duration Timer -->
+    <!-- Call Timer (when connected) -->
     <div class="call-timer" *ngIf="callState.isCallActive">
       <mat-icon>schedule</mat-icon>
       <span>{{ getCallDuration() }}</span>
-    </div>
-  </div>
-
-  <!-- User Search Modal (would be opened via dialog) -->
-  <!-- This is just a placeholder structure -->
-  <div class="user-search-placeholder" style="display: none;">
-    <h3>Search Users</h3>
-    <input type="text" placeholder="Search by username...">
-    <div class="search-results">
-      <div class="user-result">
-        <mat-icon>account_circle</mat-icon>
-        <span>Username</span>
-        <button mat-button color="primary">Call</button>
-      </div>
     </div>
   </div>
 </div>

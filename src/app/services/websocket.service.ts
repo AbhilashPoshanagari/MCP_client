@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { Observable, Subject, timer } from 'rxjs';
 import { AuthService } from './auth.service';
-import { API_URLS } from '../constants/apiUrls';
-
+// import { API_URLS } from '../constants/apiUrls';
+import { StorageService } from './storage.service';
 export interface WebSocketMessage {
   type: string;
   [key: string]: any;
@@ -14,17 +14,28 @@ export interface WebSocketMessage {
 })
 export class WebSocketService {
   private socket$: WebSocketSubject<any> | null = null;
-  private messagesSubject = new Subject<WebSocketMessage>();
+  public messagesSubject = new Subject<WebSocketMessage>();
   // private readonly WS_URL = 'ws://10.89.47.181:8100/ws';
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
+  private webSocketServerUrl: string = '';
+  private manuallyClosed = false;
+  private socketSubscription: any;
+  constructor(private authService: AuthService,
+    private storageService: StorageService
+  ) {
+    this.webSocketServerUrl = this.storageService.getValueFromKey('web_socket_server') || "";
+  }
 
-  constructor(private authService: AuthService) {}
+  getWebSocketServerUrl(): string {
+    this.webSocketServerUrl = this.storageService.getValueFromKey('web_socket_server') || "";
+    return this.webSocketServerUrl;
+  }
 
   connect(roomId: string): void {
-    if (this.socket$ && !this.socket$.closed) {
-      return;
-    }
+    // if (this.socket$ && !this.socket$.closed) {
+    //   return;
+    // }
 
     const token = this.authService.getToken();
     if (!token) {
@@ -32,19 +43,27 @@ export class WebSocketService {
       return;
     }
 
-    const url = `${API_URLS.WEB_SOCKET_URL}/${roomId}?token=${token}`;
-    // const url = `${API_URLS.WEB_SOCKET_URL}/${roomId}`;
+    const url = `${this.webSocketServerUrl}/${roomId}?token=${token}`;
     this.socket$ = webSocket(url);
 
-    this.socket$.subscribe({
-      next: (message) => this.messagesSubject.next(message),
+    this.socketSubscription = this.socket$.subscribe({
+      next: (message) => {
+        // console.log('Received WebSocket message:', message);
+        this.messagesSubject.next(message);
+      },
       error: (error) => {
         console.error('WebSocket error:', error);
-        this.handleReconnection(roomId);
+        // this.handleReconnection(roomId);
+        if (!this.manuallyClosed) {
+          this.handleReconnection(roomId);
+        }
       },
       complete: () => {
         console.log('WebSocket connection closed');
-        this.handleReconnection(roomId);
+        // this.handleReconnection(roomId);
+        if (!this.manuallyClosed) {
+          this.handleReconnection(roomId);
+        }
       }
     });
   }
@@ -66,7 +85,7 @@ export class WebSocketService {
 
   send(message: WebSocketMessage): void {
     if (this.socket$ && !this.socket$.closed) {
-      console.log("socket message : ", message);
+      console.log("send socket message : ", message);
       this.socket$.next(message);
     } else {
       console.error('WebSocket not connected');
@@ -78,6 +97,10 @@ export class WebSocketService {
   }
 
   disconnect(): void {
+      this.manuallyClosed = true; 
+    if (this.socketSubscription) {
+        this.socketSubscription.unsubscribe();
+      }
     if (this.socket$) {
       this.socket$.complete();
       this.socket$ = null;

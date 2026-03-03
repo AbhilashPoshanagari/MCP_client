@@ -91,7 +91,7 @@ startCamera(): void {
       // Create and send offer
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
-      console.log('Local SDP:', this.peerConnection.localDescription);
+      // console.log('Local SDP:', this.peerConnection.localDescription);
       if(this.peerConnection != null && !this.debug) {
         // Send offer to server
         this.restApiService.postRequest(`${this.serverUrl}${ENDPOINTS.MEDIA}/offer`, {

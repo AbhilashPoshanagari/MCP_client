@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ViewChild, ElementRef, Input, Output, EventEmitter, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, ViewChild, ElementRef, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,34 +6,25 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { WebSocketService } from '../../services/websocket.service';
-import { ChangeDetectorRef } from '@angular/core';
-import { Subscription } from 'rxjs';
-import { AuthService } from '../../services/auth.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { LoginModalComponent } from '../../components/login-modal/login-modal.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
-// import { API_URLS } from '../../constants/apiUrls';
-import { StorageService } from '../../services/storage.service';
+import { Subscription } from 'rxjs';
 
-interface CallUser {
-  id: string;
-  name: string;
-  isSharingScreen?: boolean;
-  isMuted?: boolean;
-}
+import { WebSocketService } from '../../services/websocket.service';
+import { AuthService } from '../../services/auth.service';
+import { LoginModalComponent } from '../../components/login-modal/login-modal.component';
+import { StorageService } from '../../services/storage.service';
 
 interface CallState {
   isInCall: boolean;
-  isCallActive: boolean;
   isRinging: boolean;
-  isScreenSharing: boolean;
+  isCallActive: boolean;
   isMuted: boolean;
   isVideoOn: boolean;
-  roomId?: string;
-  users: CallUser[];
+  isScreenSharing: boolean;
+  users: Array<{ id: string; name: string; isMuted?: boolean; isSharingScreen?: boolean; }>;
 }
 
 @Component({
@@ -54,86 +45,753 @@ interface CallState {
   templateUrl: './video-call.component.html',
   styleUrls: ['./video-call.component.css']
 })
-export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
-  @ViewChild('localVideo', { static: false }) localVideo!: ElementRef<HTMLVideoElement>;
-  @ViewChildren('remoteVideo') remoteVideos!: QueryList<ElementRef<HTMLVideoElement>>;
-
-  @Input() userId: string = "";
-  @Input() roomId: string = 'default-room';
-  @Output() callEnded = new EventEmitter<void>();
-  
-  callState: CallState = {
-    isInCall: false,
-    isCallActive: false,
-    isRinging: false,
-    isScreenSharing: false,
-    isMuted: false,
-    isVideoOn: true,
-    users: []
-  };
-
-  peerConnections: Map<string, RTCPeerConnection> = new Map();
-  private pendingIce: Map<string, RTCIceCandidateInit[]> = new Map();
-  private pendingRemoteStreams = new Map<string, MediaStream>();
-
-  private localStream: MediaStream | null = null;
-  private screenStream: MediaStream | null = null;
-  private iceServers: RTCIceServer[] = [];
-  private wsSubscription?: Subscription;
-
-  currentUser: any = null;
-  
-  public hasNotifications: boolean = false;
-  public showParticipantList: boolean = false;
-  private callStartTime: Date | null = null;
-
-  incomingCallInfo: { senderId: string; senderName: string; } | null = null;
-  serverUrl: string = '';
-  constructor(
-    private websocketService: WebSocketService, 
-    private authService: AuthService,
-    private dialog: MatDialog,
-    private snackBar: MatSnackBar,
-    private cdr: ChangeDetectorRef,
-    private storageService: StorageService
-  ) {}
-
-  async ngOnInit() {
-    this.serverUrl = this.storageService.getValueFromKey('media_server') || "";
-    this.currentUser = this.authService.getCurrentUser();    
-    if (!this.currentUser) {
-      this.promptLogin();
-    } else {
-      if(!this.userId && this.currentUser.id){
-        this.userId = this.currentUser.id;
-      }
-      this.websocketService.connect(this.roomId);
-      this.setupWebSocketListeners();
-      this.authService.updateUserOnlineStatus(true, "not available");
+export class VideoCallComponent implements OnInit, OnDestroy {
+  @ViewChild('localVideo', { static: false }) set localVideoRef(element: ElementRef<HTMLVideoElement>) {
+    if (element) {
+      this.localVideo = element;
+      this.attachLocalStreamToVideo();
+    }
+  }
+  @ViewChild('remoteVideo', { static: false }) set remoteVideoRef(element: ElementRef<HTMLVideoElement>) {
+    if (element) {
+      this.remoteVideo = element;
+      this.attachRemoteStreamToVideo();
     }
   }
 
-  ngAfterViewInit() {
-  this.remoteVideos.changes.subscribe(() => {
-    this.remoteVideos.forEach(video => {
-      const userId = video.nativeElement.dataset['userId'];
-      const stream = this.pendingRemoteStreams.get(userId!);
+  private localVideo?: ElementRef<HTMLVideoElement>;
+  private remoteVideo?: ElementRef<HTMLVideoElement>;
 
-      if (stream) {
-        video.nativeElement.srcObject = stream;
-        // video.nativeElement.play().catch(() => {});
-        this.pendingRemoteStreams.delete(userId!);
-      }
-    });
-  });
-}
+  @Input() userId: string = "";
+  @Input() roomId: string = 'room';
+  @Output() callEnded = new EventEmitter<void>();
 
+  // User info
+  currentUser: any;
+  targetUserName: string = '';
+  targetUserId: string = '';
+
+  // Call state
+  callState: CallState = {
+    isInCall: false,
+    isRinging: false,
+    isCallActive: false,
+    isMuted: false,
+    isVideoOn: true,
+    isScreenSharing: false,
+    users: []
+  };
+
+  incomingCallInfo: { senderId: string; senderName: string; } | null = null;
+  showParticipantList: boolean = false;
+  hasNotifications: boolean = false;
+  
+  // WebRTC
+  private peerConnection: RTCPeerConnection | null = null;
+  private localStream: MediaStream | null = null;
+  remoteStream: MediaStream | null = null;
+  private wsSubscription?: Subscription;
+  private pendingIceCandidates: RTCIceCandidateInit[] = [];
+  
+  // STUN servers
+  private iceServers: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+  
+  private callStartTime: Date | null = null;
+  private callTimerInterval: any;
+
+  constructor(
+    private websocketService: WebSocketService,
+    private authService: AuthService,
+    private dialog: MatDialog,
+    private storageService: StorageService,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef,
+    private snackBar: MatSnackBar
+  ) {}
+
+  ngOnInit() {
+    this.currentUser = this.authService.getCurrentUser() || null;
+    if (this.currentUser) {
+      console.log('Current user:', this.currentUser);
+      this.connectWebSocket();
+    }
+  }
 
   ngOnDestroy() {
     this.endCall();
-    this.websocketService.disconnect();
-    this.authService.updateUserOnlineStatus(false, "available");
     this.wsSubscription?.unsubscribe();
+    this.cleanupMedia();
+    this.websocketService.disconnect();
+    if (this.callTimerInterval) {
+      clearInterval(this.callTimerInterval);
+    }
+  }
+
+  private connectWebSocket(): void {
+    this.websocketService.connect(this.roomId);
+    this.setupWebSocketListeners();
+  }
+
+  private setupWebSocketListeners(): void {
+    this.wsSubscription = this.websocketService.messagesSubject.subscribe({
+      next: (message: any) => {
+        console.log('Received WebSocket message:', message);
+        
+        switch (message.type) {
+          case 'call-request':
+            this.handleIncomingCall(message);
+            break;
+            
+          case 'call-response':
+            this.handleCallResponse(message);
+            break;
+            
+          case 'offer':
+            this.handleOffer(message);
+            break;
+            
+          case 'answer':
+            this.handleAnswer(message);
+            break;
+            
+          case 'ice-candidate':
+            this.handleIceCandidate(message);
+            break;
+            
+          case 'call-ended':
+            this.handleRemoteCallEnd();
+            break;
+            
+          case 'user-left':
+            if (this.callState.isInCall && message.user === this.targetUserId) {
+              this.handleRemoteCallEnd();
+            }
+            break;
+        }
+      },
+      error: (error) => {
+        console.error('WebSocket error:', error);
+      }
+    });
+  }
+
+  // ==================== CALL INITIATION ====================
+
+  async startCall(): Promise<void> {
+    try {
+      if (!this.targetUserName) {
+        this.snackBar.open('Please enter a username', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Show ringing state immediately
+      this.callState.isInCall = true;
+      this.callState.isRinging = true;
+      this.cdr.detectChanges();
+
+      // First get user ID from username (you need to implement this)
+      const userId = await this.findUserIdByUsername(this.targetUserName);
+      if (!userId) {
+        this.snackBar.open('User not found', 'Close', { duration: 3000 });
+        this.resetCallState();
+        return;
+      }
+
+      this.targetUserId = userId;
+
+      // Initialize local stream (but don't start peer connection yet)
+      await this.initializeLocalStream();
+
+      // Send call request
+      this.websocketService.send({
+        type: 'call-request',
+        sender: this.currentUser.id,
+        sender_username: this.currentUser.username,
+        target: this.targetUserName,
+        room_id: this.roomId
+      });
+
+      this.snackBar.open(`Calling ${this.targetUserName}...`, 'Close', { duration: 3000 });
+
+    } catch (error) {
+      console.error('Error starting call:', error);
+      this.snackBar.open('Failed to start call', 'Close', { duration: 3000 });
+      this.resetCallState();
+    }
+  }
+
+    // Temporary method - replace with actual user lookup service
+  private async findUserIdByUsername(username: string): Promise<string | null> {
+    // You need to implement this based on your user management system
+    // This could be an API call or looking at the list of online users
+    console.warn('Implement user ID lookup for username:', username);
+    return new Promise((resolve, reject) => {
+      this.authService.getUserDetailsByUsername(username).subscribe({
+        next: (user: any) => {
+          if (user) {
+            this.targetUserId = user.data.id;
+            console.log('Found user ID:', this.targetUserId, 'for username:', username);
+            resolve(this.targetUserId);
+          } else {
+            console.warn('User not found for username:', username);
+            this.snackBar.open('User not found', 'Close', { duration: 3000 });
+            resolve(null);
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching user details:', error);
+          this.snackBar.open('Error fetching user details', 'Close', { duration: 3000 });
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  // ==================== INCOMING CALL HANDLING ====================
+
+  private handleIncomingCall(message: any): void {
+    this.ngZone.run(() => {
+      this.incomingCallInfo = {
+        senderId: message.from_user_id,
+        senderName: message.from_username
+      };
+      this.hasNotifications = true;
+      this.cdr.detectChanges();
+
+      // Show notification
+      this.snackBar.open(`Incoming call from ${message.from_username}`, 'Answer', {
+        duration: 15000,
+      }).onAction().subscribe(() => {
+        this.acceptIncomingCall(message.from_user_id);
+      });
+    });
+  }
+
+  async acceptIncomingCall(senderId: string): Promise<void> {
+    try {
+      const sender = this.incomingCallInfo;
+      if (!sender) return;
+
+      // Update UI
+      this.callState.isInCall = true;
+      this.targetUserId = senderId;
+      this.targetUserName = sender.senderName;
+      this.incomingCallInfo = null;
+
+      // Initialize local stream
+      await this.initializeLocalStream();
+
+      // Send acceptance
+      this.websocketService.send({
+        type: 'call-response',
+        accepted: true,
+        target: senderId,
+        from_user_id: this.currentUser.id,
+        from_username: this.currentUser.username
+      });
+
+      // Initialize peer connection (will receive offer)
+      await this.initializePeerConnection();
+
+      this.cdr.detectChanges();
+
+    } catch (error) {
+      console.error('Error accepting call:', error);
+      this.rejectIncomingCall(senderId);
+    }
+  }
+
+  rejectIncomingCall(senderId: string): void {
+    this.websocketService.send({
+      type: 'call-response',
+      accepted: false,
+      target: senderId,
+      from_user_id: this.currentUser.id,
+      from_username: this.currentUser.username
+    });
+
+    this.incomingCallInfo = null;
+    this.hasNotifications = false;
+    this.resetCallState();
+  }
+
+  // ==================== CALL RESPONSE HANDLING ====================
+
+  private handleCallResponse(message: any): void {
+    this.ngZone.run(() => {
+      if (message.accepted) {
+        // Call was accepted
+        this.callState.isRinging = false;
+        this.snackBar.open(`Call accepted by ${message.from_username}`, 'Close', { duration: 3000 });
+
+        // Initialize peer connection and send offer
+        this.initializePeerConnection().then(() => {
+          this.createAndSendOffer();
+        });
+
+      } else {
+        // Call was rejected
+        this.snackBar.open('Call rejected', 'Close', { duration: 3000 });
+        this.resetCallState();
+      }
+    });
+  }
+
+  // ==================== WEBRTC METHODS ====================
+
+  private async initializeLocalStream(): Promise<void> {
+    try {
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true
+      });
+
+      // Attach to video element if available
+      this.attachLocalStreamToVideo();
+
+    } catch (error) {
+      console.error('Error accessing media devices:', error);
+      throw new Error('Could not access camera/microphone');
+    }
+  }
+
+  private attachLocalStreamToVideo(): void {
+    if (this.localVideo && this.localStream) {
+      this.ngZone.run(() => {
+        const videoEl = this.localVideo!.nativeElement;
+        videoEl.srcObject = this.localStream;
+        videoEl.play().catch(e => console.error('Error playing local video:', e));
+      });
+    }
+  }
+
+  // private attachRemoteStreamToVideo(): void {
+  //   if (this.remoteVideo && this.remoteStream) {
+  //     this.ngZone.run(() => {
+  //       const videoEl = this.remoteVideo!.nativeElement;
+  //       videoEl.srcObject = this.remoteStream;
+  //       videoEl.play().catch(e => console.error('Error playing remote video:', e));
+  //     });
+  //   }
+  // }
+
+  private attachRemoteStreamToVideo(): void {
+  if (!this.remoteVideo || !this.remoteStream) {
+    console.log('Remote video or stream not ready');
+    return;
+  }
+
+  try {
+    const videoEl = this.remoteVideo.nativeElement;
+    
+    // Only update if the stream has changed
+    if (videoEl.srcObject !== this.remoteStream) {
+      console.log('Attaching remote stream to video');
+      
+      // Set the new stream
+      videoEl.srcObject = this.remoteStream;
+      
+      // Play with proper error handling
+      this.playRemoteVideo(videoEl);
+    }
+  } catch (error) {
+    console.error('Error attaching remote stream:', error);
+  }
+}
+
+private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
+  const maxRetries = 5;
+  
+  // Check if video element is ready
+  if (!videoEl) {
+    console.log('Video element not available');
+    return;
+  }
+
+  // Check if stream has tracks
+  if (!this.remoteStream || this.remoteStream.getTracks().length === 0) {
+    if (retryCount < maxRetries) {
+      console.log(`No tracks yet, retrying (${retryCount + 1}/${maxRetries})...`);
+      setTimeout(() => this.playRemoteVideo(videoEl, retryCount + 1), 200 * (retryCount + 1));
+    }
+    return;
+  }
+
+  // Try to play
+  const playPromise = videoEl.play();
+  
+  if (playPromise !== undefined) {
+    playPromise
+      .then(() => {
+        console.log('✅ Remote video playing successfully');
+      })
+      .catch(error => {
+        console.error(`Error playing remote video (attempt ${retryCount + 1}):`, error.name);
+        
+        if (error.name === 'AbortError' && retryCount < maxRetries) {
+          // Retry with increasing delay
+          setTimeout(() => {
+            this.playRemoteVideo(videoEl, retryCount + 1);
+          }, 300 * (retryCount + 1));
+        } 
+        else if (error.name === 'NotAllowedError') {
+          // Need user interaction
+          console.log('Play requires user interaction');
+          // You could show a play button here
+        }
+        else {
+          console.error('Failed to play remote video:', error);
+        }
+      });
+  }
+}
+
+  private async initializePeerConnection(): Promise<void> {
+    this.peerConnection = new RTCPeerConnection({ 
+      iceServers: this.iceServers,
+      iceCandidatePoolSize: 10
+    });
+
+    this.remoteStream = null;
+    // this.peerConnection.addTransceiver("video", { direction: "sendrecv" });
+
+    // Add local tracks
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => {
+        if (this.localStream) {
+          this.peerConnection?.addTrack(track, this.localStream);
+        }
+      });
+    }
+
+    // Create remote stream
+    // this.attachRemoteStreamToVideo();
+
+    // Handle ICE candidates
+    this.peerConnection.onicecandidate = (event) => {
+      if (event.candidate && this.targetUserId) {
+        this.websocketService.send({
+          type: 'ice-candidate',
+          candidate: {
+            candidate: event.candidate.candidate,
+            sdpMid: event.candidate.sdpMid,
+            sdpMLineIndex: event.candidate.sdpMLineIndex
+          },
+          sender: this.currentUser.id,
+          target: this.targetUserId
+        });
+      }
+    };
+
+    // Handle remote tracks
+    // this.peerConnection.ontrack = (event) => {
+    //   console.log('Remote track received');
+    //   event.streams[0].getTracks().forEach(track => {
+    //     this.remoteStream?.addTrack(track);
+    //   });
+    //   this.attachRemoteStreamToVideo();
+    // };
+      this.remoteStream = new MediaStream();
+
+    this.peerConnection.ontrack = async (event) => {
+      console.log('Remote track received:', event.track.kind, 'from stream:', event.streams[0].id);
+      this.ngZone.run(() => {
+        try {
+          console.log("Remote track received:", event.track.kind);
+
+          if (!this.remoteStream) return;
+
+          this.remoteStream.addTrack(event.track);
+
+          if (this.remoteVideo?.nativeElement) {
+            const videoEl = this.remoteVideo.nativeElement;
+
+            if (videoEl.srcObject !== this.remoteStream) {
+              videoEl.srcObject = this.remoteStream;
+              videoEl.play().catch(e => console.error("Remote play error:", e));
+            }
+          }
+        } catch (error) {
+        console.error('Error in ontrack handler:', error);
+      }
+      });
+    }
+
+    // Handle connection state
+    this.peerConnection.onconnectionstatechange = () => {
+      console.log('Connection state:', this.peerConnection?.connectionState);
+      this.ngZone.run(() => {
+        if (this.peerConnection?.connectionState === 'connected') {
+          this.callState.isCallActive = true;
+          this.callState.isInCall = true;
+          this.callStartTime = new Date();
+          this.startCallTimer();
+          this.cdr.detectChanges();
+        }
+      });
+    };
+
+    // Handle negotiation needed
+    this.peerConnection.onnegotiationneeded = () => {
+      console.log('Negotiation needed');
+    };
+
+    // Add any pending ICE candidates
+    if (this.pendingIceCandidates.length > 0) {
+      for (const candidate of this.pendingIceCandidates) {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+      this.pendingIceCandidates = [];
+    }
+
+    try {
+      
+      // Log current state
+      console.log('Attaching remote stream to video:',
+      //    {
+      //   streamId: this.remoteStream?.id,
+      //   tracks: this.remoteStream?.getTracks().map(t => t.kind),
+      //   currentSrcObject: videoEl?.srcObject ? 'exists' : 'null'
+      // }
+    );
+
+      // Set the stream
+      // const videoEl = this.remoteVideo?.nativeElement;
+      // if (this.remoteStream && videoEl?.srcObject !== this.remoteStream) {
+      //   videoEl?.srcObject = this.remoteStream?this.remoteStream: null;
+      //   console.log('Set video.srcObject to remote stream');
+      //         this.playRemoteVideo(videoEl);
+      // }
+
+      // ...existing code...
+      // Set the stream
+      const videoEl = this.remoteVideo?.nativeElement;
+      if (!videoEl) {
+        console.warn('remote video element not found');
+      } else if (this.remoteStream && videoEl.srcObject !== this.remoteStream) {
+        videoEl.srcObject = this.remoteStream;
+        console.log('Set video.srcObject to remote stream');
+        this.playRemoteVideo(videoEl);
+      }
+ // ...existing code...
+      
+      // Play the video
+      
+    } catch (error) {
+      console.error('Error attaching remote stream:', error);
+    }
+  }
+
+  private async createAndSendOffer(): Promise<void> {
+    if (!this.peerConnection) return;
+
+    try {
+      const offer = await this.peerConnection.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true
+      });
+      
+      await this.peerConnection.setLocalDescription(offer);
+
+      this.websocketService.send({
+        type: 'offer',
+        offer: offer,
+        sender: this.currentUser.id,
+        sender_username: this.currentUser.username,
+        target: this.targetUserId
+      });
+
+    } catch (error) {
+      console.error('Error creating offer:', error);
+    }
+  }
+
+  private async handleOffer(message: any): Promise<void> {
+    try {
+      if (!this.peerConnection) {
+        await this.initializePeerConnection();
+      }
+
+      if (this.peerConnection) {
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(message.signal.offer));
+        
+        const answer = await this.peerConnection.createAnswer();
+        await this.peerConnection.setLocalDescription(answer);
+
+        this.websocketService.send({
+          type: 'answer',
+          answer: answer,
+          sender: this.currentUser.id,
+          sender_username: this.currentUser.username,
+          target: message.from_user_id
+        });
+      }
+    } catch (error) {
+      console.error('Error handling offer:', error);
+    }
+  }
+
+  private async handleAnswer(message: any): Promise<void> {
+    try {
+      if (this.peerConnection) {
+        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(message.answer));
+      }
+    } catch (error) {
+      console.error('Error handling answer:', error);
+    }
+  }
+
+  private async handleIceCandidate(message: any): Promise<void> {
+    try {
+      if (this.peerConnection && this.peerConnection.remoteDescription) {
+        await this.peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+      } else {
+        this.pendingIceCandidates.push(message.candidate);
+      }
+    } catch (error) {
+      console.error('Error adding ICE candidate:', error);
+    }
+  }
+
+  private handleRemoteCallEnd(): void {
+    this.ngZone.run(() => {
+      this.snackBar.open('Remote user ended the call', 'Close', { duration: 3000 });
+      this.endCall();
+    });
+  }
+
+  // ==================== CALL CONTROLS ====================
+
+  toggleMute(): void {
+    if (this.localStream) {
+      const audioTracks = this.localStream.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      this.callState.isMuted = !this.callState.isMuted;
+    }
+  }
+
+  toggleVideo(): void {
+    if (this.localStream) {
+      const videoTracks = this.localStream.getVideoTracks();
+      videoTracks.forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      this.callState.isVideoOn = !this.callState.isVideoOn;
+    }
+  }
+
+  toggleScreenShare(): void {
+    // Implement screen sharing
+    this.callState.isScreenSharing = !this.callState.isScreenSharing;
+  }
+
+  toggleParticipantList(): void {
+    this.showParticipantList = !this.showParticipantList;
+  }
+
+  endCall(): void {
+    // Notify remote user
+    if (this.targetUserId) {
+      this.websocketService.send({
+        type: 'call-ended',
+        sender: this.currentUser?.id,
+        target: this.targetUserId
+      });
+    }
+
+    this.resetCallState();
+    this.callEnded.emit();
+  }
+
+  private resetCallState(): void {
+    // Clean up WebRTC
+    if (this.peerConnection) {
+      this.peerConnection.close();
+      this.peerConnection = null;
+    }
+
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream = null;
+    }
+
+    if (this.remoteStream) {
+      this.remoteStream.getTracks().forEach(track => track.stop());
+      this.remoteStream = null;
+    }
+
+    // Clear video elements
+    if (this.localVideo) {
+      this.localVideo.nativeElement.srcObject = null;
+    }
+    if (this.remoteVideo) {
+      this.remoteVideo.nativeElement.srcObject = null;
+    }
+
+    // Reset state
+    this.callState = {
+      isInCall: false,
+      isRinging: false,
+      isCallActive: false,
+      isMuted: false,
+      isVideoOn: true,
+      isScreenSharing: false,
+      users: []
+    };
+
+    this.targetUserId = '';
+    this.incomingCallInfo = null;
+    this.pendingIceCandidates = [];
+    this.callStartTime = null;
+
+    if (this.callTimerInterval) {
+      clearInterval(this.callTimerInterval);
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  private cleanupMedia(): void {
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => track.stop());
+    }
+    if (this.remoteStream) {
+      this.remoteStream.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  // ==================== UI HELPERS ====================
+
+  playVideo(videoElement: HTMLVideoElement): void {
+    videoElement.play().catch(e => console.error('Error playing video:', e));
+  }
+
+  copyRoomId(): void {
+    navigator.clipboard.writeText(this.roomId);
+    this.snackBar.open('Room ID copied to clipboard', 'Close', { duration: 2000 });
+  }
+
+  getCallDuration(): string {
+    if (!this.callStartTime) return '00:00';
+
+    const diff = Math.floor((new Date().getTime() - this.callStartTime.getTime()) / 1000);
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  private startCallTimer(): void {
+    if (this.callTimerInterval) {
+      clearInterval(this.callTimerInterval);
+    }
+    this.callTimerInterval = setInterval(() => {
+      this.cdr.detectChanges();
+    }, 1000);
   }
 
   promptLogin(): void {
@@ -142,948 +800,40 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       disableClose: true
     });
 
-    dialogRef.afterClosed().subscribe(user => {
-      if (user) {
-        this.currentUser = user;
-        // console.log('Logged in user:', this.currentUser);
-        this.websocketService.connect(this.roomId);
-        this.setupWebSocketListeners();
-        this.authService.updateUserOnlineStatus(true, "not available");
-        this.cdr.detectChanges();
-      } else {
-        this.callEnded.emit();
+    dialogRef.afterClosed().subscribe({
+      next: (user: any) => {
+        if (user) {
+          this.ngZone.run(() => {
+            this.currentUser = user;
+            this.connectWebSocket();
+            this.authService.updateUserOnlineStatus(true, "not available");
+            this.cdr.detectChanges();
+          });
+        }
+      },
+      error: (error: any) => {
+        console.error("Login error:", error);
       }
     });
   }
 
   logout(): void {
-    this.endCall();
     this.authService.logout();
     this.currentUser = null;
-    this.callEnded.emit();
+    this.endCall();
+    this.websocketService.disconnect();
+  }
+
+  // Placeholder methods
+  searchUserToCall(): void {
+    console.log('Search user to call');
   }
 
   openContacts(): void {
-    this.snackBar.open('Contacts feature coming soon!', 'OK', {
-      duration: 3000
-    });
+    console.log('Open contacts');
   }
 
   joinRoom(): void {
-    if (this.roomId && this.roomId.trim()) {
-      // this.websocketService.disconnect();
-      // this.websocketService.connect(this.roomId);
-      this.startCall();
-    } else {
-      this.snackBar.open('Please enter a room ID', 'OK', {
-        duration: 3000
-      });
-    }
+    console.log('Join room');
   }
-
-  private async getWebRTCConfig() {
-    try {
-      const response = await fetch(`${this.serverUrl}/api/config`);
-      const config = await response.json();
-      this.iceServers = config.iceServers;
-    } catch (error) {
-      console.error('Failed to get WebRTC config:', error);
-      this.iceServers = [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-      ];
-    }
-  }
-
-  private setupWebSocketListeners() {
-    this.wsSubscription = this.websocketService.onMessage().subscribe(async(message: any) => {
-      switch (message.type) {
-        case 'offer':
-          this.handleOffer(message.offer, message.sender);
-          break;
-        case 'answer':
-          this.handleAnswer(message.answer, message.sender);
-          break;
-        case 'ice-candidate':
-          this.handleIceCandidate(message.candidate, message.sender);
-          break;
-        case 'call-request':
-          this.handleCallRequest(message.from_user_id, message.from_username);
-          break;
-        case 'call-response':
-          await this.handleCallResponse(message.accepted, message.from_user_id);
-          break;
-        case 'user-joined':
-          this.handleUserJoined(message.user);
-          break;
-        case 'user-left':
-          this.handleUserLeft(message.user);
-          break;
-        case 'screen-sharing':
-          this.handleScreenSharing(message.sender, message.isSharing);
-          break;
-      }
-    });
-  }
-
-  private createPeerConnection(userId: string): RTCPeerConnection {
-    const config: RTCConfiguration = {
-      iceServers: this.iceServers
-    };
-
-    const pc = new RTCPeerConnection(config);
-
-      // Add logging for state changes
-  pc.oniceconnectionstatechange = () => {
-    console.log(`ICE state for ${userId}: ${pc.iceConnectionState}`);
-    this.logPeerConnectionStates();
-    
-    if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-        console.error(`ICE connection failed for user: ${userId}`);
-        this.snackBar.open(`Connection lost with ${userId}`, 'OK', {
-          duration: 3000
-        });
-        
-        // Try to restart ICE
-        if (pc.iceConnectionState === 'failed') {
-          // this.restartIce(userId, pc);
-          console.log("Peer connection : ", pc.iceConnectionState);
-        }
-      } else if (pc.iceConnectionState === 'connected') {
-        console.log(`ICE connected with ${userId}`);
-        this.callState.isCallActive = true;
-        this.callState.isRinging = false;
-        this.cdr.detectChanges();
-      }
-    };
-
-    pc.onsignalingstatechange = () => {
-      console.log(`Signaling state for ${userId}: ${pc.signalingState}`);
-    };
-
-    // Add local stream tracks
-    // if (this.localStream) {
-    //   this.localStream.getTracks().forEach(track => {
-    //     pc.addTrack(track, this.localStream!);
-    //   });
-    // }
-
-    pc.ontrack = (event) => {
-        const stream = event.streams[0];
-
-        const videoEl = this.remoteVideos?.find(
-          v => v.nativeElement.dataset['userId'] === userId.toString()
-        );
-
-        if (videoEl) {
-          videoEl.nativeElement.srcObject = stream;
-          videoEl.nativeElement.play().catch(() => {});
-        } else {
-          this.pendingRemoteStreams.set(userId, stream);
-        }
-      };
-
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log("event candidate : ", event.candidate)
-        this.websocketService.send({
-          type: 'ice-candidate',
-          candidate: event.candidate,
-          target: userId
-        });
-      }
-    };
-
-    pc.onconnectionstatechange = () => {
-      console.log('Connection state for', userId, ':', pc.connectionState);
-    };
-
-    pc.onnegotiationneeded = async () => {
-      try {
-        if (pc.signalingState !== 'stable') return;
-
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        this.websocketService.send({
-          type: 'offer',
-          offer,
-          target: userId
-        });
-      } catch (e) {
-        console.error('Negotiation failed', e);
-      }
-    };
-
-
-    return pc;
-  }
-
-  private getOrCreatePeerConnection(userId: string): RTCPeerConnection {
-    let pc = this.peerConnections.get(userId);
-    
-    // If connection exists but is closed, remove it
-    if (pc && (pc.connectionState === 'closed' || pc.iceConnectionState === 'closed')) {
-      console.log(`Removing closed connection for ${userId}`);
-      pc.close();
-      this.peerConnections.delete(userId);
-      pc = undefined;
-    }
-    
-    if (!pc) {
-      console.log(`Creating new peer connection for ${userId}`);
-      pc = this.createPeerConnection(userId);
-      this.peerConnections.set(userId, pc);
-    } else {
-      console.log(`Using existing peer connection for ${userId}, state: ${pc.signalingState}`);
-    }
-    
-    return pc;
-  }
-
-  async handleOffer(offer: RTCSessionDescriptionInit, senderId: string): Promise<void> {
-    console.log(`Received offer from ${senderId}`);
-    
-    try {
-      // Check if we're already in a call with this user
-        await this.getWebRTCConfig();
-      const existingPc = this.peerConnections.get(senderId);
-      if (existingPc && existingPc.signalingState !== 'stable') {
-        console.warn(`Already processing offer from ${senderId}. Ignoring duplicate.`);
-        return;
-      }
-
-      // If this is an incoming call, update state
-      if (!this.callState.isInCall) {
-        this.callState.isRinging = true;
-        this.callState.isInCall = true;
-        
-        if (!this.callState.users.some(u => u.id === senderId)) {
-          this.callState.users.push({
-            id: senderId,
-            name: senderId
-          });
-        }
-      }
-
-      // Get local media if not already done
-      if (!this.localStream) {
-        try {
-          this.localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-          });
-          
-          if (this.localVideo?.nativeElement) {
-            // this.localVideo.nativeElement.srcObject = this.localStream;
-            this.attachLocalStream();
-          }
-        } catch (error) {
-          console.error('Error getting user media:', error);
-          this.snackBar.open('Failed to access camera/microphone', 'OK', {
-            duration: 3000
-          });
-          return;
-        }
-      }
-
-      // Get or create peer connection
-      const pc = this.getOrCreatePeerConnection(senderId);
-      pc.getSenders().forEach(sender => {
-          if (!sender.track) pc.removeTrack(sender);
-        });
-      this.addLocalTracks(pc);
-
-      // Check current signaling state
-      if (pc.signalingState !== 'stable') {
-        console.warn(`Peer connection for ${senderId} is not stable (${pc.signalingState}). Restarting negotiation.`);
-        
-        // Close and create new connection
-        pc.close();
-        this.peerConnections.delete(senderId);
-        const newPc = this.createPeerConnection(senderId);
-        this.peerConnections.set(senderId, newPc);
-        
-        await newPc.setRemoteDescription(new RTCSessionDescription(offer));
-        const queued = this.pendingIce.get(senderId);
-          queued?.forEach(c => pc.addIceCandidate(c));
-          this.pendingIce.delete(senderId);
-        const answer = await newPc.createAnswer();
-        await newPc.setLocalDescription(answer);
-        
-        this.websocketService.send({
-          type: 'answer',
-          answer: answer,
-          target: senderId,
-          sender: this.userId
-        });
-      } else {
-        // Normal flow
-        await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        const queued = this.pendingIce.get(senderId);
-          queued?.forEach(c => pc.addIceCandidate(c));
-          this.pendingIce.delete(senderId);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        this.websocketService.send({
-          type: 'answer',
-          answer: answer,
-          target: senderId,
-          sender: this.userId
-        });
-      }
-      this.callState.isCallActive = true;
-      this.callState.isRinging = false;
-      this.cdr.detectChanges();
-      
-    } catch (error: any) {
-      console.error('Error handling offer:', error);
-      
-      if (error.name === 'InvalidStateError') {
-        console.error(`InvalidStateError in handleOffer for ${senderId}. Signaling state may be corrupted.`);
-        // Clean up and retry or notify user
-        this.peerConnections.get(senderId)?.close();
-        this.peerConnections.delete(senderId);
-      }
-      
-      this.snackBar.open('Failed to handle call offer', 'OK', {
-        duration: 3000
-      });
-    }
-  }
-
-  async handleAnswer(answer: RTCSessionDescriptionInit, senderId: string) {
-    try {
-      const pc = this.peerConnections.get(senderId);
-      if (!pc) {
-        console.error('No peer connection found for:', senderId);
-        return;
-      }
-      
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
-      const queued = this.pendingIce.get(senderId);
-          queued?.forEach(c => pc.addIceCandidate(c));
-          this.pendingIce.delete(senderId);
-      this.callState.isRinging = false;
-      this.callState.isCallActive = true;
-      this.cdr.detectChanges();
-    } catch (error) {
-      console.error('Error handling answer:', error);
-    }
-  }
-
-  async handleIceCandidate(candidate: RTCIceCandidateInit, senderId: string) {
-    const pc = this.peerConnections.get(senderId);
-
-    if (!pc || !pc.remoteDescription) {
-      if (!this.pendingIce.has(senderId)) {
-        this.pendingIce.set(senderId, []);
-      }
-      this.pendingIce.get(senderId)!.push(candidate);
-      return;
-    }
-
-    await pc.addIceCandidate(candidate);
-  }
-
-
-  async handleUserJoined(userId: string) {
-    try {
-      // Don't create connection to self
-      if (userId === this.userId) return;
-
-      // Add user to list
-      if (!this.callState.users.some(u => u.id === userId)) {
-        this.callState.users.push({
-          id: userId,
-          name: userId
-        });
-      }
-
-      // If we're already in a call, create offer for new user
-      if (this.callState.isCallActive && this.localStream) {
-        const pc = this.getOrCreatePeerConnection(userId);
-        
-        // const offer = await pc.createOffer();
-        // await pc.setLocalDescription(offer);
-        pc.getSenders().forEach(sender => {
-          if (!sender.track) pc.removeTrack(sender);
-        });
-
-        this.addLocalTracks(pc);
-      }
-      
-      this.cdr.detectChanges();
-    } catch (error) {
-      console.error('Error handling user joined:', error);
-    }
-  }
-
-  handleUserLeft(userId: string) {
-    // Remove user from list
-    this.callState.users = this.callState.users.filter(u => u.id !== userId);
-    
-    // Close and remove peer connection
-    const pc = this.peerConnections.get(userId);
-    if (pc) {
-      pc.close();
-      this.peerConnections.delete(userId);
-    }
-    
-    // If all users left, end call
-    if (this.callState.users.length === 0) {
-      this.endCall();
-    }
-    
-    this.cdr.detectChanges();
-  }
-
-  handleScreenSharing(senderId: string, isSharing: boolean) {
-    const user = this.callState.users.find(u => u.id === senderId);
-    if (user) {
-      user.isSharingScreen = isSharing;
-    }
-    this.cdr.detectChanges();
-  }
-
-  handleCallRequest(senderId: string, senderName: string): void {
-    // Store incoming call info
-    this.incomingCallInfo = { senderId, senderName };
-    this.hasNotifications = true;
-    
-    // Check if already in a call
-    if (this.callState.isInCall) {
-      this.websocketService.send({
-        type: 'call-response',
-        accepted: false,
-        target: senderId,
-        reason: 'User is already in a call'
-      });
-      this.incomingCallInfo = null;
-      this.hasNotifications = false;
-      return;
-    }
-    
-    this.cdr.detectChanges();
-  }
-
-  acceptIncomingCall(senderId: string): void {
-    if (!senderId) {
-      this.snackBar.open('Invalid call request', 'OK', {
-        duration: 3000
-      });
-      return;
-    }
-
-    this.websocketService.send({
-      type: 'call-response',
-      accepted: true,
-      target: senderId,
-      from_user_id: this.userId
-    });
-
-    this.callState.isInCall = true;
-    this.callState.isRinging = true;
-    this.hasNotifications = false;
-    
-    this.incomingCallInfo = null;
-    
-    this.snackBar.open('Call accepted. Connecting...', 'OK', {
-      duration: 3000
-    });
-    
-    this.cdr.detectChanges();
-  }
-
-  rejectIncomingCall(senderId: string): void {
-    if (!senderId) {
-      this.snackBar.open('Invalid call request', 'OK', {
-        duration: 3000
-      });
-      return;
-    }
-
-    this.websocketService.send({
-      type: 'call-response',
-      accepted: false,
-      target: senderId,
-      reason: 'Call rejected by user'
-    });
-
-    this.incomingCallInfo = null;
-    this.hasNotifications = false;
-    
-    this.snackBar.open('Call rejected', 'OK', {
-      duration: 3000
-    });
-    
-    this.cdr.detectChanges();
-  }
-
-  async handleCallResponse(accepted: boolean, senderId: string): Promise<void> {
-  if (accepted) {
-    try {
-      this.callState.isRinging = false;
-      this.callState.isCallActive = true;
-      
-      // Add user to list if not already there
-      if (!this.callState.users.some(u => u.id === senderId)) {
-        this.callState.users.push({
-          id: senderId,
-          name: senderId
-        });
-      }
-      
-      // Ensure we have local media stream
-      if (!this.localStream) {
-        try {
-          this.localStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-              frameRate: { ideal: 30 }
-            },
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true
-            }
-          });
-          
-          if (this.localVideo?.nativeElement) {
-            // this.localVideo.nativeElement.srcObject = this.localStream;
-            this.attachLocalStream();
-
-          }
-        } catch (error) {
-          console.error('Error getting user media:', error);
-          this.snackBar.open('Failed to access camera/microphone', 'OK', {
-            duration: 3000
-          });
-          return;
-        }
-      }
-      
-      // Create peer connection for the accepting user
-      const pc = this.getOrCreatePeerConnection(senderId);
-      this.addLocalTracks(pc);
-      // Create and send offer
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      
-      this.websocketService.send({
-        type: 'offer',
-        offer: offer,
-        target: senderId
-      });
-      
-      this.snackBar.open('Call accepted! Connecting...', 'OK', {
-        duration: 3000
-      });
-      
-    } catch (error) {
-      console.error('Error handling call response:', error);
-      this.snackBar.open('Failed to establish connection', 'OK', {
-        duration: 3000
-      });
-      this.endCall();
-    }
-    
-  } else {
-    // Rejection handling remains the same
-    this.callState.isRinging = false;
-    this.callState.isInCall = false;
-    
-    // Clean up connections
-    this.peerConnections.forEach(pc => pc.close());
-    this.peerConnections.clear();
-    
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(track => track.stop());
-      this.localStream = null;
-    }
-    
-    if (this.localVideo?.nativeElement) {
-      this.localVideo.nativeElement.srcObject = null;
-    }
-    
-    this.snackBar.open('Call rejected by user', 'OK', {
-      duration: 3000
-    });
-  }
-  
-  this.cdr.detectChanges();
-}
-
-  async startCall() {
-    try {
-      this.callState.isInCall = true;
-      this.callState.isRinging = true;
-      this.cdr.detectChanges();
-      
-      // Get user media
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      
-      this.callStartTime = new Date();
-
-      // Display local video
-      if (this.localVideo?.nativeElement) {
-        console.log('Setting local video stream');
-        // this.localVideo.nativeElement.srcObject = this.localStream;
-                this.attachLocalStream();
-
-      }
-
-      // Get WebRTC config
-      await this.getWebRTCConfig();
-
-      this.callState.isCallActive = true;
-      this.callState.isRinging = false;
-
-      // Notify others in the room
-      this.websocketService.send({
-        type: 'user-joined',
-        user: this.userId,
-        roomId: this.roomId
-      });
-
-    } catch (error) {
-      console.error('Error starting call:', error);
-      this.snackBar.open('Failed to start call. Please check camera/microphone permissions.', 'OK', {
-        duration: 5000
-      });
-      this.endCall();
-    }
-  }
-
-  async initiateCall(targetUser: any): Promise<void> {
-    try {
-      console.log(`Initiating call to ${targetUser.id}`);
-      
-      // Get WebRTC config first
-      await this.getWebRTCConfig();
-      
-      // Get local media
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      
-      // Display local video
-      if (this.localVideo?.nativeElement) {
-        this.localVideo.nativeElement.srcObject = this.localStream;
-        // this.attachLocalStream();
-      }
-      
-      // Update call state
-      this.callState.isInCall = true;
-      this.callState.isRinging = true;
-      this.callStartTime = new Date();
-      
-      // Add target user to users list
-      if (!this.callState.users.some(u => u.id === targetUser.id)) {
-        this.callState.users.push({
-          id: targetUser.id,
-          name: targetUser.name || targetUser.id
-        });
-      }
-      
-      // Create peer connection for the target user
-      // But DON'T create offer yet - wait for acceptance
-      this.getOrCreatePeerConnection(targetUser.id);
-      
-      // Send call request
-      this.websocketService.send({
-        type: 'call-request',
-        sender: this.userId,
-        sender_username: this.currentUser?.username || this.userId,
-        target: targetUser.id
-      });
-      
-      this.cdr.detectChanges();
-      
-      // Set timeout for call request
-      setTimeout(() => {
-        if (this.callState.isRinging && !this.callState.isCallActive) {
-          console.warn(`Call timeout to ${targetUser.id}`);
-          this.snackBar.open('No response from user. Call timed out.', 'OK', {
-            duration: 5000
-          });
-          this.endCall();
-        }
-      }, 30000);
-      
-    } catch (error) {
-      console.error('Error initiating call:', error);
-      this.snackBar.open('Failed to start call. Check your camera/microphone permissions.', 'OK', {
-        duration: 5000
-      });
-      this.endCall();
-    }
-  }
-
-  async toggleScreenShare() {
-    try {
-      if (!this.callState.isScreenSharing) {
-        // Start screen sharing
-        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            cursor: 'always',
-            displaySurface: 'monitor'
-          } as any,
-          audio: false
-        });
-
-        const videoTrack = this.screenStream.getVideoTracks()[0];
-        
-        // Replace video track in all peer connections
-        this.peerConnections.forEach((pc, userId) => {
-          const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-          if (sender && videoTrack) {
-            sender.replaceTrack(videoTrack);
-          }
-        });
-
-        // Handle screen sharing stop
-        videoTrack.onended = () => {
-          this.toggleScreenShare();
-        };
-
-        this.callState.isScreenSharing = true;
-        
-        // Notify others
-        this.websocketService.send({
-          type: 'screen-sharing',
-          isSharing: true,
-          sender: this.userId
-        });
-
-      } else {
-        // Stop screen sharing
-        if (this.screenStream) {
-          this.screenStream.getTracks().forEach(track => track.stop());
-          this.screenStream = null;
-        }
-
-        // Revert to camera
-        if (this.localStream) {
-          const videoTrack = this.localStream.getVideoTracks()[0];
-          
-          this.peerConnections.forEach((pc, userId) => {
-            const sender = pc.getSenders().find(s => s.track?.kind === 'video');
-            if (sender && videoTrack) {
-              sender.replaceTrack(videoTrack);
-            }
-          });
-        }
-
-        this.callState.isScreenSharing = false;
-        
-        // Notify others
-        this.websocketService.send({
-          type: 'screen-sharing',
-          isSharing: false,
-          sender: this.userId
-        });
-      }
-      
-      this.cdr.detectChanges();
-    } catch (error) {
-      console.error('Screen sharing error:', error);
-      this.snackBar.open('Failed to share screen', 'OK', {
-        duration: 3000
-      });
-    }
-  }
-
-  toggleMute() {
-    if (this.localStream) {
-      const audioTrack = this.localStream.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        this.callState.isMuted = !audioTrack.enabled;
-      }
-    }
-  }
-
-  toggleVideo() {
-    if (this.localStream) {
-      const videoTrack = this.localStream.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        this.callState.isVideoOn = videoTrack.enabled;
-      }
-    }
-  }
-
-  copyRoomId(): void {
-    navigator.clipboard.writeText(this.roomId).then(() => {
-      this.snackBar.open('Room ID copied to clipboard!', 'OK', {
-        duration: 3000
-      });
-    }).catch(err => {
-      console.error('Failed to copy room ID:', err);
-      this.snackBar.open('Failed to copy room ID', 'OK', {
-        duration: 3000
-      });
-    });
-  }
-
-  toggleParticipantList(): void {
-    this.showParticipantList = !this.showParticipantList;
-  }
-
-  getCallDuration(): string {
-    if (!this.callStartTime || !this.callState.isCallActive) {
-      return '00:00:00';
-    }
-    
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - this.callStartTime.getTime()) / 1000);
-    
-    const hours = Math.floor(diff / 3600);
-    const minutes = Math.floor((diff % 3600) / 60);
-    const seconds = diff % 60;
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-
-  searchUserToCall(): void {
-    const username = prompt('Enter username to call:');
-    if (username) {
-      this.authService.getUserDetailsByUsername(username).subscribe((res: any) =>{
-        console.log("user details : ", res);
-        if(res.data && res.data.id){
-          this.initiateCall({
-            id: res.data.id,
-            name: username
-          });
-        }else {
-          alert("User not found");
-        }
-      })
-
-    }
-  }
-
-  endCall() {
-    // Stop all media tracks
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(track => track.stop());
-      this.localStream = null;
-    }
-    
-    if (this.screenStream) {
-      this.screenStream.getTracks().forEach(track => track.stop());
-      this.screenStream = null;
-    }
-    
-    // Close all peer connections
-    this.peerConnections.forEach(pc => pc.close());
-    this.peerConnections.clear();
-    
-    // Reset state
-    this.callState = {
-      isInCall: false,
-      isCallActive: false,
-      isRinging: false,
-      isScreenSharing: false,
-      isMuted: false,
-      isVideoOn: true,
-      users: []
-    };
-    
-    // Reset other states
-    this.callStartTime = null;
-    this.showParticipantList = false;
-    this.incomingCallInfo = null;
-    this.hasNotifications = false;
-    
-    // Clear video elements
-    if (this.localVideo?.nativeElement) {
-      this.localVideo.nativeElement.srcObject = null;
-    }
-    
-    this.remoteVideos?.forEach(video => {
-      video.nativeElement.srcObject = null;
-    });
-    
-    // Notify others
-    this.websocketService.send({
-      type: 'user-left',
-      user: this.userId,
-      roomId: this.roomId
-    });
-    
-    this.callEnded.emit();
-    this.cdr.detectChanges();
-  }
-
-  playVideo(videoElement: HTMLVideoElement | null) {
-  if (videoElement) {
-    videoElement.play().catch(err => {
-      console.warn('Video play failed:', err);
-    });
-  }
-}
-
-private logPeerConnectionStates(): void {
-  console.log('=== Peer Connection States ===');
-  this.peerConnections.forEach((pc, userId) => {
-    console.log(`${userId}:`);
-    console.log(`  Signaling: ${pc.signalingState}`);
-    console.log(`  ICE: ${pc.iceConnectionState}`);
-    console.log(`  Connection: ${pc.connectionState}`);
-  });
-  console.log('=============================');
-}
-
-private addLocalTracks(pc: RTCPeerConnection) {
-    if (!this.localStream) return;
-
-    const senders = pc.getSenders();
-    this.localStream.getTracks().forEach(track => {
-      if (!senders.find(s => s.track === track)) {
-        pc.addTrack(track, this.localStream!);
-      }
-    });
-  }
-
-  private attachLocalStream() {
-    if (!this.localVideo?.nativeElement || !this.localStream) return;
-
-    const video = this.localVideo.nativeElement;
-    video.muted = true;          // 🔴 REQUIRED (echo + autoplay)
-    video.playsInline = true;    // 🔴 REQUIRED (mobile)
-    video.autoplay = true;
-
-    video.srcObject = this.localStream;
-
-    video.play().catch(err => {
-      console.warn('Local video play blocked:', err);
-    });
-  }
-
-
 }

@@ -1,188 +1,3 @@
-// import { Component, OnInit, EventEmitter, OnDestroy, Output, signal, model, inject, Input } from '@angular/core';
-// import { McpService } from '../services/mcp.service';
-// import { Subscription } from 'rxjs';
-// import { CommonModule } from '@angular/common';
-// import { FormsModule } from '@angular/forms';
-// import { McpElicitationService } from '../services/mcp/mcp-elicitation.service';
-// import { OpenAITool } from '../constants/toolschema';
-// import { StorageService } from '../services/storage.service';
-// import { MatDialog } from '@angular/material/dialog';
-// import { DomainDialogComponent } from '../components/domain-dialog/domain-dialog.component';
-// import { ToolformatterService } from '../services/toolformatter.service';
-// import { DynamicStructuredTool, Tool } from 'langchain';
-
-// import { MatIconModule } from '@angular/material/icon';
-// import { MatButtonModule } from '@angular/material/button';
-// import { MatFormFieldModule } from '@angular/material/form-field';
-// import { MatInputModule } from '@angular/material/input';
-// import { MatSelectModule } from '@angular/material/select';
-// import { MatTooltipModule } from '@angular/material/tooltip';
-// import { MatBadgeModule } from '@angular/material/badge';
-// import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-// interface ElicitResponse {
-//   action: 'accept' | 'decline' | 'cancel';
-//   data?: any;
-// }
-// @Component({
-//   selector: 'app-mcp-client',
-//   imports: [CommonModule, FormsModule,
-//     MatIconModule,
-//     MatButtonModule,
-//     MatFormFieldModule,
-//     MatInputModule,
-//     MatSelectModule,
-//     MatTooltipModule,
-//     MatBadgeModule,
-//     MatProgressSpinnerModule],
-//   templateUrl: './mcp-client.component.html',
-//   styleUrls: ['./mcp-client.component.css'],
-//   standalone: true
-// })
-// export class McpClientComponent implements OnInit, OnDestroy {
-//   @Input() displayMode: 'sidebar' | 'header' = 'sidebar';
-//   @Output() newChatRequested = new EventEmitter<void>();
-
-//     // UI State
-//   showOpenAiConfig = false;
-//   showNotificationsPanel = false;
-//   showMCPConfigDialog = false;
-//   showOpenAiKey = false;
-
-//   isConnected: boolean = false;
-//   notifications: any[] = [];
-//   currentElicitRequest: any = null;
-//   loader: boolean = false;
-//   private subscriptions: Subscription[] = [];
-//   readonly mcpServer = model('');
-//   readonly openAiKey = model('');
-//   readonly dialog = inject(MatDialog);
-//   mcp_props = {
-//           title: 'Connect to MCP Server',
-//           message: 'Please enter the MCP server URL to connect.',
-//           placeholder: 'Enter MCP server URL',
-//           confirmText: 'Connect',
-//           cancelText: 'Cancel',
-//           domain: this.mcpServer() || '',
-//           page: 'mcp_server'
-//         };
-//   openai_props = {
-//         title: 'Connect to LLM',
-//         message: 'Please enter the OpenAI API key to connect to the LLM service.',
-//         placeholder: 'Enter OpenAI API key here',
-//         confirmText: 'Connect',
-//         cancelText: 'Cancel',
-//         domain: this.openAiKey() || '',
-//         page: 'open_ai_token'
-//       };
-//   @Output() tools = new EventEmitter<{open_ai_tools: OpenAITool[], langchain_tools: DynamicStructuredTool[]}>();
-//   // @Output() langChainTools = new EventEmitter<DynamicStructuredTool[]>;
-//   @Output() sendOpenAiKey = new EventEmitter<string>();
-
-//   constructor(private mcpService: McpService, 
-//     private storageService: StorageService,
-//     private toolFormatter: ToolformatterService,
-//     private elicitationService: McpElicitationService) {}
-
-//   ngOnInit(): void {
-//     this.subscriptions.push(
-//       this.mcpService.connectionStatus$.subscribe((status: boolean) => {
-//         console.log("MCP client component : ", status);
-//         this.isConnected = status;
-//       }),
-      
-//       this.mcpService.notifications$.subscribe((notification: any) => {
-//         this.notifications.push(notification);
-//       }),
-      
-//       this.mcpService.elicitRequests$.subscribe((request: any) => {
-//         console.log("Request : ", request);
-//         this.currentElicitRequest = request;
-//       })
-//     );
-//     this.mcpServer.set(this.storageService.getValueFromKey('mcp_server') || '');
-//     this.openAiKey.set(this.storageService.getValueFromKey('open_ai_token') || '');
-//     if(this.mcpServer()){
-//     setTimeout(() => {
-//           this.connect(this.mcpServer());
-//     }, 200);
-//     }else{
-//       this.openDomainDialog(this.mcp_props);
-//     }
-
-//   }
-
-//   async connect(url: string) {
-//     console.log("Connecting to MCP server : ", url);
-//     try {
-//       this.loader = true;
-//       await this.mcpService.connect(url);
-//       this.mcpService.tools$.subscribe(tools => {
-//         const openai_tools = this.toolFormatter.formatMultipleTools(tools);
-//         const langChain_tools = this.toolFormatter.convertMultipleTools(tools)
-//         this.tools.emit({open_ai_tools: openai_tools, langchain_tools: langChain_tools});
-//         // this.langChainTools.emit(langChain_tools);
-//       });
-//       this.loader = false;
-//     } catch (error) {
-//       console.error('Connection error:', error);
-//       this.loader = false;
-//     }
-//   }
-
-//   async disconnect() {
-//     await this.mcpService.disconnect();
-//   }
-
-//   submitElicitForm(formData: any) {
-//     if (this.currentElicitRequest) {
-//       const requestId: number | string | null = this.elicitationService.getCurrentRequestId();
-//       console.log("Elicitation id : ", requestId);
-//       this.mcpService.submitElicitResponse({
-//         action: 'accept',
-//         content: formData
-//       });
-//       console.log("Server response : ",{
-//         action: 'accept',
-//         content: formData
-//       })
-//       this.currentElicitRequest = null;
-//     }
-//   }
-
-//   cancelElicit() {
-//     this.mcpService.submitElicitResponse({
-//       action: 'cancel',
-//     });
-//     this.currentElicitRequest = null;
-//   }
-
-//    openDomainDialog(props_options: any) {
-//         const dialogRef = this.dialog.open(DomainDialogComponent, {
-//           width: '500px',
-//           disableClose: false, // Prevent closing without input
-//           data: props_options
-//         });
-    
-//         dialogRef.afterClosed().subscribe((result) => {
-//           if (result.server) {
-//             this.mcpServer.set(result.server);
-//             if(result.page === 'mcp_server'){
-//               this.storageService.saveValuesInKey('mcp_server', result.server );
-//               this.connect(result.server);
-//             }else if(result.page === 'open_ai_token'){
-//               this.openAiKey.set(result.server);
-//               this.storageService.saveValuesInKey('open_ai_token', result.server );
-//             }
-//           }
-//         });
-//       }
-
-//   ngOnDestroy(): void {
-//     this.subscriptions.forEach(sub => sub.unsubscribe());
-//     this.disconnect();
-//   }
-// }
-
 import { Component, OnInit, EventEmitter, OnDestroy, Output, signal, model, inject, Input } from '@angular/core';
 import { McpService } from '../services/mcp.service';
 import { Subscription } from 'rxjs';
@@ -205,6 +20,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../services/auth.service';
+import { WebSocketService } from '../services/websocket.service';
+
 interface ElicitResponse {
   action: 'accept' | 'decline' | 'cancel';
   data?: any;
@@ -251,6 +68,7 @@ export class McpClientComponent implements OnInit, OnDestroy {
   readonly mcpServer = model('');
   readonly openAiKey = model('');
   readonly mediaServer = model('');
+  readonly webSocketServer = model('');
   readonly dialog = inject(MatDialog);
   
   mcp_props = {
@@ -282,6 +100,16 @@ export class McpClientComponent implements OnInit, OnDestroy {
     domain: this.mediaServer() || '',
     page: 'media_server'
   };
+
+  web_socket_props = {
+    title: 'Connect to Web Socket Server',
+    message: 'Please enter the Web Socket Server URL to connect.',
+    placeholder: 'Enter Web Socket Server URL here',
+    confirmText: 'Connect',
+    cancelText: 'Cancel',
+    domain: this.webSocketServer() || '',
+    page: 'web_socket_server'
+  };
   // Add notification handling in MCP client
   @Output() notificationsChange = new EventEmitter<any[]>();
   @Output() unreadCountChange = new EventEmitter<number>();
@@ -297,7 +125,8 @@ export class McpClientComponent implements OnInit, OnDestroy {
     private storageService: StorageService,
     private toolFormatter: ToolformatterService,
     private elicitationService: McpElicitationService,
-    private authService: AuthService
+    private authService: AuthService,
+    private webSocketService: WebSocketService
   ) {}
 
   ngOnInit(): void {
@@ -371,6 +200,10 @@ export class McpClientComponent implements OnInit, OnDestroy {
     this.openDomainDialog(this.media_props);
   }
 
+  openWebSocketServerConfigDialog(): void {
+    this.openDomainDialog(this.web_socket_props);
+  }
+
   closeMCPConfigDialog(): void {
     this.showMCPConfigDialog = false;
   }
@@ -392,14 +225,16 @@ export class McpClientComponent implements OnInit, OnDestroy {
     const savedMcpServer = this.storageService.getValueFromKey('mcp_server') || '';
     const savedOpenAiKey = this.storageService.getValueFromKey('open_ai_token') || '';
     const savedMediaServer = this.storageService.getValueFromKey('media_server') || '';
+    const savedWebSocketServer = this.storageService.getValueFromKey('web_socket_server') || '';
 
     this.mcpServerUrl = savedMcpServer;
     this.openAiKeyValue = savedOpenAiKey;
+    // this.webSocketServerUrl = savedWebSocketServer;
     // this.mediaServerUrl = savedMediaServer;
     
     this.mcpServer.set(savedMcpServer);
     this.openAiKey.set(savedOpenAiKey);
-    this.mediaServer.set(savedMediaServer);
+    this.webSocketServer.set(savedWebSocketServer);
     if (savedOpenAiKey) {
       this.sendOpenAiKey.emit(savedOpenAiKey);
     }
@@ -571,6 +406,11 @@ export class McpClientComponent implements OnInit, OnDestroy {
           this.storageService.saveValuesInKey('media_server', result.server);
           this.authService.setApiUrl();
           this.addNotification('success', 'Media Server Updated', 'Media server URL has been updated');
+      } else if (result.page === 'web_socket_server') {
+          this.webSocketServer.set(result.server);
+          this.storageService.saveValuesInKey('web_socket_server', result.server);
+          this.webSocketService.getWebSocketServerUrl();
+          this.addNotification('success', 'Web Socket Server Updated', 'Web Socket server URL has been updated');
       }
     }
     });

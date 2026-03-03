@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -29,7 +29,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
   templateUrl: './login-modal.component.html',
   styleUrls: ['./login-modal.component.css']
 })
-export class LoginModalComponent {
+export class LoginModalComponent implements OnInit {
   @Output() loginSuccess = new EventEmitter<any>();
   
   activeTab: 'login' | 'register' = 'login';
@@ -51,6 +51,10 @@ export class LoginModalComponent {
     private dialogRef: MatDialogRef<LoginModalComponent>,
     private snackBar: MatSnackBar
   ) {}
+  
+  ngOnInit(): void {
+    // Any initialization logic can go here
+  }
   
   onLogin(): void {
     if (!this.loginUsername || !this.loginPassword) {

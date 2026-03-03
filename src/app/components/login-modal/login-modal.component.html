@@ -44,7 +44,8 @@
               type="password" 
               required
               [disabled]="isLoading"
-              placeholder="Enter your password">
+              placeholder="Enter your password"
+              autocomplete="current-password">
             <mat-icon matPrefix>lock</mat-icon>
             <mat-error *ngIf="!loginPassword && loginPassword">
               Password is required
@@ -72,17 +73,6 @@
           <!-- Alternative login options -->
           <div class="divider">
             <span>or continue with</span>
-          </div>
-
-          <div class="social-login">
-            <button mat-stroked-button type="button" class="social-button">
-              <img src="assets/google.svg" alt="Google" class="social-icon">
-              Google
-            </button>
-            <button mat-stroked-button type="button" class="social-button">
-              <img src="assets/github.svg" alt="GitHub" class="social-icon">
-              GitHub
-            </button>
           </div>
         </form>
       </div>

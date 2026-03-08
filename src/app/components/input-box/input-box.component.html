@@ -16,6 +16,9 @@
       <button mat-icon-button (click)="submitMessage()" [disabled]="!message.trim()" class="send-button">
         <mat-icon>send</mat-icon>
       </button>
+      <button mat-icon-button (click)="startCall()" class="send-button" [disabled]="isCallActive">
+        <mat-icon>mic</mat-icon>
+      </button>
     </div>
   <!-- </div> -->
 
@@ -64,6 +67,16 @@
       >
         <mat-icon>lightbulb</mat-icon>
       </button>
+      @if (isCallActive){
+          <button 
+                mat-fab 
+                color="warn" 
+                (click)="stopCall()" 
+                class="action-button"
+                matTooltip="End Call">
+                <mat-icon>call_end</mat-icon>
+          </button>
+      }
       <mat-menu #promptsMenu="matMenu">
         @for (prompt of prompts; track prompt.name) {
           <button mat-menu-item (click)="selectPrompt(prompt)">
@@ -76,7 +89,7 @@
   <!-- </div> -->
 
   <!-- Selected Items - Chips -->
-  @if (selectedTool || selectedResource || selectedPrompt) {
+  @if (selectedTool || selectedResource || selectedPrompt || showVoiceCall) {
     <!-- <div class="selected-section"> -->
       <div class="selected-chips">
         <!-- <div class="chips-label">Active:</div> -->
@@ -108,8 +121,43 @@
               </button>
             </mat-chip>
           }
+
+          @if (isCallActive) {
+            <button 
+              class="mute-button"
+              [class.muted]="isMuted"
+              (click)="toggleMute()"
+              [title]="isMuted ? 'Unmute microphone' : 'Mute microphone'">
+              <span class="mic-icon">
+                {{ isMuted ? '🔇' : '🎤' }}
+              </span>
+              {{ isMuted ? 'Unmute' : 'Mute' }}
+            </button>
+              <span class="mute-status" [class.muted]="isMuted">
+                • {{ isMuted ? 'Muted' : 'Live' }}
+              </span>
+            }
         </div>
       </div>
     <!-- </div> -->
   }
+
+  <!-- @if (showVoiceCall) {
+  <div class="voice-call-overlay">
+    <div class="voice-call-modal">
+      <div class="modal-header">
+        <h2>Voice Call</h2>
+        <button mat-icon-button (click)="enableVoiceInput()" class="close-button">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <div class="modal-body">
+        <app-voice-to-text 
+          #voiceCall
+          (callEnded)="onCallEnded()">
+        </app-voice-to-text>
+      </div>
+    </div>
+  </div>
+} -->
 </div>

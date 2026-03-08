@@ -1,0 +1,241 @@
+/* src/app/app.component.css (updated) */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+h1 {
+  color: #333;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.call-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.call-button:hover {
+  background-color: #0056b3;
+}
+
+.call-button.active {
+  background-color: #dc3545;
+}
+
+.call-button.active:hover {
+  background-color: #c82333;
+}
+
+.mute-button {
+  background-color: #6c757d;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.mute-button:hover {
+  background-color: #5a6268;
+}
+
+.mute-button.muted {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.mute-button.muted:hover {
+  background-color: #e0a800;
+}
+
+.mic-icon {
+  font-size: 18px;
+}
+
+.clear-button {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.clear-button:hover {
+  background-color: #138496;
+}
+
+.clear-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.status {
+  margin-left: auto;
+  font-size: 14px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status span {
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 3px;
+}
+
+.status span.new,
+.status span.connecting {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.status span.connected {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.status span.disconnected,
+.status span.failed {
+  background-color: #dc3545;
+  color: #fff;
+}
+
+.mute-status {
+  font-size: 12px;
+  padding: 2px 6px !important;
+}
+
+.mute-status.muted {
+  background-color: #ffc107 !important;
+  color: #000 !important;
+}
+
+.messages-container {
+  height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  margin-bottom: 20px;
+}
+
+.message {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  word-wrap: break-word;
+}
+
+.user-message {
+  background-color: #e3f2fd;
+  margin-left: 20%;
+}
+
+.ai-message {
+  background-color: #f3e5f5;
+  margin-right: 20%;
+}
+
+.system-message {
+  background-color: #e0e0e0;
+  font-style: italic;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.instructions {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.instructions h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.instructions ol {
+  margin-bottom: 0;
+  color: #666;
+}
+
+.instructions li {
+  margin-bottom: 5px;
+}
+
+.voice-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 5px;
+  border: 1px solid #dee2e6;
+}
+
+.indicator-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.indicator-dot.live {
+  background-color: #28a745;
+  animation: pulse 2s infinite;
+}
+
+.indicator-dot.muted {
+  background-color: #dc3545;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .status {
+    margin-left: 0;
+    justify-content: center;
+  }
+  
+  .user-message,
+  .ai-message {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}

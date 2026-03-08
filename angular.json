@@ -44,11 +44,11 @@
                 {
                   "type": "initial",
                   "maximumWarning": "8MB",
-                  "maximumError": "4MB"
+                  "maximumError": "5MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "8kB",
+                  "maximumWarning": "15kB",
                   "maximumError": "50kB"
                 }
               ],
@@ -125,5 +125,8 @@
     "@schematics/angular:resolver": {
       "typeSeparator": "."
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

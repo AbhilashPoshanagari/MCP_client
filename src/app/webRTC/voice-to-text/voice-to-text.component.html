@@ -1,0 +1,82 @@
+<!-- src/app/app.component.html -->
+<div class="container">
+  <h1>{{ title }}</h1>
+  
+  <div class="controls">
+    <button 
+      [class.active]="isCallActive"
+      (click)="isCallActive ? stopCall() : startCall()"
+      [disabled]="connectionState === 'connecting'">
+      {{ isCallActive ? 'Stop Call' : 'Start Call' }}
+    </button>
+
+        <!-- New mute/unmute button -->
+         @if (isCallActive) {
+    <button 
+      class="mute-button"
+      [class.muted]="isMuted"
+      (click)="toggleMute()"
+      [title]="isMuted ? 'Unmute microphone' : 'Mute microphone'">
+      <span class="mic-icon">
+        {{ isMuted ? '🔇' : '🎤' }}
+      </span>
+      {{ isMuted ? 'Unmute' : 'Mute' }}
+    </button>
+    }
+    <button 
+      (click)="clearMessages()"
+      [disabled]="messages.length === 0">
+      Clear Messages
+    </button>
+    <div class="status">
+      Status: <span [class]="connectionState">{{ connectionState }}</span>
+      @if (isCallActive){
+      <span class="mute-status" [class.muted]="isMuted">
+        • {{ isMuted ? 'Muted' : 'Live' }}
+      </span>
+    }
+    </div>
+    
+    <div class="status">
+      Status: <span [class]="connectionState">{{ connectionState }}</span>
+    </div>
+  </div>
+
+  <div class="messages-container">
+    @for (message of messages; track message) {
+    <div
+         class="message" 
+         [class.user-message]="message.type === 'user'"
+         [class.ai-message]="message.type === 'ai'"
+         [class.system-message]="message.type === 'system'">
+      {{ message.text }}
+    </div>
+    }
+  </div>
+
+  @if (!isCallActive) {
+  <div class="instructions">
+    <h3>Instructions:</h3>
+    <ol>
+      <li>Click "Start Call" to begin the WebRTC connection</li>
+      <li>Allow microphone access when prompted</li>
+      <li>Start speaking - your voice will be transcribed</li>
+      <li>The AI will respond both with text and voice</li>
+      <li>Click "Stop Call" to end the conversation</li>
+    </ol>
+  </div>
+}
+
+    @if (isCallActive && !isMuted) {
+  <div class="voice-indicator">
+    <div class="indicator-dot live"></div>
+    <span>Microphone is live - speaking will be transcribed</span>
+  </div>
+}
+    @if (isCallActive && isMuted) {
+  <div class="voice-indicator">
+    <div class="indicator-dot muted"></div>
+    <span>Microphone is muted - audio not being sent</span>
+  </div>
+}
+</div>

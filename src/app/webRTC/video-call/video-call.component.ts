@@ -90,6 +90,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   remoteStream: MediaStream | null = null;
+  private screenStream: MediaStream | null = null;
   private wsSubscription?: Subscription;
   private pendingIceCandidates: RTCIceCandidateInit[] = [];
   
@@ -116,6 +117,7 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     this.currentUser = this.authService.getCurrentUser() || null;
     if (this.currentUser) {
       console.log('Current user:', this.currentUser);
+      this.roomId = `${this.roomId}-${this.currentUser.username}`;
       this.connectWebSocket();
     }
   }
@@ -170,6 +172,9 @@ export class VideoCallComponent implements OnInit, OnDestroy {
               this.handleRemoteCallEnd();
             }
             break;
+          case 'screen-sharing':
+          this.handleScreenSharing(message.sender, message.isSharing);
+          break;
         }
       },
       error: (error) => {
@@ -368,16 +373,6 @@ export class VideoCallComponent implements OnInit, OnDestroy {
     }
   }
 
-  // private attachRemoteStreamToVideo(): void {
-  //   if (this.remoteVideo && this.remoteStream) {
-  //     this.ngZone.run(() => {
-  //       const videoEl = this.remoteVideo!.nativeElement;
-  //       videoEl.srcObject = this.remoteStream;
-  //       videoEl.play().catch(e => console.error('Error playing remote video:', e));
-  //     });
-  //   }
-  // }
-
   private attachRemoteStreamToVideo(): void {
   if (!this.remoteVideo || !this.remoteStream) {
     console.log('Remote video or stream not ready');
@@ -456,7 +451,6 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
     });
 
     this.remoteStream = null;
-    // this.peerConnection.addTransceiver("video", { direction: "sendrecv" });
 
     // Add local tracks
     if (this.localStream) {
@@ -466,9 +460,6 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
         }
       });
     }
-
-    // Create remote stream
-    // this.attachRemoteStreamToVideo();
 
     // Handle ICE candidates
     this.peerConnection.onicecandidate = (event) => {
@@ -486,14 +477,6 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
       }
     };
 
-    // Handle remote tracks
-    // this.peerConnection.ontrack = (event) => {
-    //   console.log('Remote track received');
-    //   event.streams[0].getTracks().forEach(track => {
-    //     this.remoteStream?.addTrack(track);
-    //   });
-    //   this.attachRemoteStreamToVideo();
-    // };
       this.remoteStream = new MediaStream();
 
     this.peerConnection.ontrack = async (event) => {
@@ -530,6 +513,9 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
           this.callStartTime = new Date();
           this.startCallTimer();
           this.cdr.detectChanges();
+        }else if (this.peerConnection?.connectionState === 'disconnected' || this.peerConnection?.connectionState === 'failed') {
+          this.snackBar.open('Connection lost', 'Close', { duration: 3000 });
+          this.endCall();
         }
       });
     };
@@ -548,25 +534,6 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
     }
 
     try {
-      
-      // Log current state
-      console.log('Attaching remote stream to video:',
-      //    {
-      //   streamId: this.remoteStream?.id,
-      //   tracks: this.remoteStream?.getTracks().map(t => t.kind),
-      //   currentSrcObject: videoEl?.srcObject ? 'exists' : 'null'
-      // }
-    );
-
-      // Set the stream
-      // const videoEl = this.remoteVideo?.nativeElement;
-      // if (this.remoteStream && videoEl?.srcObject !== this.remoteStream) {
-      //   videoEl?.srcObject = this.remoteStream?this.remoteStream: null;
-      //   console.log('Set video.srcObject to remote stream');
-      //         this.playRemoteVideo(videoEl);
-      // }
-
-      // ...existing code...
       // Set the stream
       const videoEl = this.remoteVideo?.nativeElement;
       if (!videoEl) {
@@ -576,10 +543,7 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
         console.log('Set video.srcObject to remote stream');
         this.playRemoteVideo(videoEl);
       }
- // ...existing code...
-      
-      // Play the video
-      
+            
     } catch (error) {
       console.error('Error attaching remote stream:', error);
     }
@@ -663,6 +627,13 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
     });
   }
 
+  handleScreenSharing(senderId: string, isSharing: boolean) {    
+    const user = this.callState.users.find(u => u.id === senderId);
+    if (user) {
+      user.isSharingScreen = isSharing;
+    }
+  }
+
   // ==================== CALL CONTROLS ====================
 
   toggleMute(): void {
@@ -685,9 +656,93 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
     }
   }
 
-  toggleScreenShare(): void {
-    // Implement screen sharing
-    this.callState.isScreenSharing = !this.callState.isScreenSharing;
+  // toggleScreenShare(): void {
+  //   // Implement screen sharing
+  //   this.callState.isScreenSharing = !this.callState.isScreenSharing;
+  // }
+
+    async toggleScreenShare() {
+    try {
+      if (!this.callState.isScreenSharing) {
+        // Start screen sharing
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: 'always',
+            displaySurface: 'monitor'
+          } as any,
+          audio: false
+        });
+
+        const videoTrack = this.screenStream.getVideoTracks()[0];
+        this.peerConnection?.getSenders().forEach(sender => {
+          if (sender.track?.kind === 'video' && videoTrack) {
+            sender.replaceTrack(videoTrack).then(() => {
+              console.log(`Replaced video track with screen share for sender: ${sender}`);
+            }).catch(error => {
+              console.error('Error replacing track for screen share:', error);
+            });
+          }
+        });
+
+        // Handle screen sharing stop
+        videoTrack.onended = () => {
+          // this.debugLog('Screen sharing ended by user');
+          this.toggleScreenShare();
+        };
+
+        this.callState.isScreenSharing = true;
+        
+        // Notify others
+        this.websocketService.send({
+          type: 'screen-sharing',
+          isSharing: true,
+          sender: this.userId
+        });
+
+        // this.debugLog('Started screen sharing');
+
+      } else {
+        // Stop screen sharing
+        if (this.screenStream) {
+          this.screenStream.getTracks().forEach(track => track.stop());
+          this.screenStream = null;
+        }
+
+        // Revert to camera
+        if (this.localStream) {
+          const videoTrack = this.localStream.getVideoTracks()[0];
+          this.peerConnection?.getSenders().forEach(sender => {
+            if (sender.track?.kind === 'video' && videoTrack) {
+              sender.replaceTrack(videoTrack).then(() => {
+                console.log(`Replaced screen share with camera for sender: ${sender}`);
+              }).catch(error => {
+                console.error('Error replacing track to revert screen share:', error);
+              });
+            }
+          });
+ 
+        }
+
+        this.callState.isScreenSharing = false;
+        
+        // Notify others
+        this.websocketService.send({
+          type: 'screen-sharing',
+          isSharing: false,
+          sender: this.userId
+        });
+
+        // this.debugLog('Stopped screen sharing');
+      }
+      
+      // this.safeDetectChanges();
+      this.cdr.detectChanges();
+    } catch (error) {
+      // this.debugLog('Screen sharing error:', error);
+      this.snackBar.open('Failed to share screen', 'OK', {
+        duration: 3000
+      });
+    }
   }
 
   toggleParticipantList(): void {
@@ -771,8 +826,8 @@ private playRemoteVideo(videoEl: HTMLVideoElement, retryCount = 0): void {
     videoElement.play().catch(e => console.error('Error playing video:', e));
   }
 
-  copyRoomId(): void {
-    navigator.clipboard.writeText(this.roomId);
+  async copyRoomId(): Promise<void> {
+    await navigator.clipboard.writeText(this.roomId);
     this.snackBar.open('Room ID copied to clipboard', 'Close', { duration: 2000 });
   }
 

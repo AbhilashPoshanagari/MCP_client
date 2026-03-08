@@ -198,7 +198,8 @@
         [color]="callState.isMuted ? 'warn' : 'primary'"
         (click)="toggleMute()"
         class="control-btn"
-        matTooltip="{{ callState.isMuted ? 'Unmute' : 'Mute' }}">
+        matTooltip="{{ callState.isMuted ? 'Unmute' : 'Mute' }}"
+        [disabled]="!callState.isCallActive">
         <mat-icon>{{ callState.isMuted ? 'mic_off' : 'mic' }}</mat-icon>
       </button>
 
@@ -207,8 +208,18 @@
         [color]="callState.isVideoOn ? 'primary' : 'warn'"
         (click)="toggleVideo()"
         class="control-btn"
-        matTooltip="{{ callState.isVideoOn ? 'Turn off video' : 'Turn on video' }}">
+        matTooltip="{{ callState.isVideoOn ? 'Turn off video' : 'Turn on video' }}"
+        [disabled]="!callState.isCallActive">
         <mat-icon>{{ callState.isVideoOn ? 'videocam' : 'videocam_off' }}</mat-icon>
+      </button>
+
+      <button mat-fab 
+              [color]="callState.isScreenSharing ? 'accent' : 'primary'"
+              (click)="toggleScreenShare()"
+              class="control-button"
+              matTooltip="{{ callState.isScreenSharing ? 'Stop sharing' : 'Share screen' }}"
+              [disabled]="!callState.isCallActive">
+        <mat-icon>{{ callState.isScreenSharing ? 'stop_screen_share' : 'screen_share' }}</mat-icon>
       </button>
 
       <button 
@@ -216,7 +227,8 @@
         color="warn" 
         (click)="endCall()" 
         class="end-call-btn"
-        matTooltip="End Call">
+        matTooltip="End Call"
+        [disabled]="!callState.isCallActive">
         <mat-icon>call_end</mat-icon>
       </button>
     </div>

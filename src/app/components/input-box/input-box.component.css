@@ -172,6 +172,74 @@
   color: #6b7280;
 }
 
+/* Voice Call Overlay - Fix for app component */
+.voice-call-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  animation: fadeIn 0.2s ease;
+}
+
+.voice-call-modal {
+  width: 100vw;
+  height: 100vh;
+  background: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0;
+  
+  @media (min-width: 768px) {
+    width: 95vw;
+    height: 90vh;
+    max-width: 1400px;
+    border-radius: 16px;
+  }
+}
+
+.voice-call-modal .modal-header {
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
+  padding: 16px 20px;
+  flex-shrink: 0;
+  
+  h2 {
+    color: white;
+    margin: 0;
+    font-size: 20px;
+  }
+  
+  .close-button {
+    color: #aaa;
+    
+    &:hover {
+      color: white;
+    }
+  }
+}
+
+.voice-call-modal .modal-body {
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  
+  app-video-call {
+    flex: 1;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .input-container {

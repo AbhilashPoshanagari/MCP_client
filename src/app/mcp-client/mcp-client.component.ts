@@ -235,6 +235,7 @@ export class McpClientComponent implements OnInit, OnDestroy {
     this.mcpServer.set(savedMcpServer);
     this.openAiKey.set(savedOpenAiKey);
     this.webSocketServer.set(savedWebSocketServer);
+    this.mediaServer.set(savedMediaServer);
     if (savedOpenAiKey) {
       this.sendOpenAiKey.emit(savedOpenAiKey);
     }

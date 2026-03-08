@@ -38,7 +38,7 @@ export class RestApiService {
     );
   }
 
-  postRequest(url: string, reqBody: {[key: string]: string}, customHeaders: {[key: string]: string} = {}) {
+  postRequest(url: string, reqBody: {[key: string]: any}, customHeaders: {[key: string]: string} = {}) {
     const headers = this.getAuthHeaders();
     
     if (customHeaders) {

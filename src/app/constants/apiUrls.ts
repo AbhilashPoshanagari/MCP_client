@@ -9,4 +9,5 @@ export const ENDPOINTS = {
     REGISTER: '/api/auth/register',
     USER_SEARCH: '/users/search',
     MEDIA: '/api/media',
+    AUDIO: '/api/voice',
 };

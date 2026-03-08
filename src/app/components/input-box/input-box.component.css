@@ -298,12 +298,54 @@
   }
   
   .chips-container {
-    gap: 6px;
+    /* gap: 6px; */
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 25px;
   }
   
   .custom-chip {
     font-size: 0.8125rem !important;
     padding: 5px 10px !important;
+  }
+
+    .mute-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    color: #1e293b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 36px;
+  }
+
+  .mute-button.muted {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #dc2626;
+  }
+
+  .mute-button .mic-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .mute-status {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.875rem;
+    color: #10b981;
+  }
+
+  .mute-status.muted {
+    color: #ef4444;
   }
 }
 

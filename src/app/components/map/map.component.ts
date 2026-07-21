@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
 import * as L from 'leaflet';
 import { CommonModule } from '@angular/common';
 import { FeatureDetail, WMSLayer } from '../models/message.model';
@@ -8,6 +8,7 @@ import { FeatureDetail, WMSLayer } from '../models/message.model';
   imports: [CommonModule],
   templateUrl: './map.component.html',
   styleUrl: './map.component.css',
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: true
 })
 export class MapComponent implements OnInit, OnChanges, AfterViewInit {

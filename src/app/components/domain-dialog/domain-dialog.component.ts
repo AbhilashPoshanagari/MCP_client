@@ -1,4 +1,4 @@
-import { Component, Input, Inject, OnInit } from '@angular/core';
+import { Component, Input, Inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 import { FormsModule } from '@angular/forms';
@@ -11,6 +11,7 @@ import { RestApiService } from '../../services/rest-api.service';
   imports: [FormsModule, MatFormFieldModule, MatInputModule],
   templateUrl: './domain-dialog.component.html',
   styleUrl: './domain-dialog.component.css',
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: true
 })
 export class DomainDialogComponent implements OnInit {

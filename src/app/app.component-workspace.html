@@ -75,7 +75,14 @@
               }
             </div>
           }
-
+          <button mat-icon-button
+                  matTooltip="Digital twin"
+                  color="primary" 
+                  (click)="toggleDigitalTwin()"
+                  class="video-call-button"
+                  title="Digital Twin">
+            <mat-icon>3d_rotation </mat-icon>
+          </button>
           <button mat-icon-button
                   matTooltip="Video Call"
                   color="primary" 
@@ -258,6 +265,24 @@
           #objectDetection
           (endVideoProcessing)="endVideoProcessing()">
         </app-object-detection>
+      </div>
+    </div>
+  </div>
+}
+
+@if (showDigitalTwin) {
+  <div class="video-call-overlay">
+    <div class="video-call-modal">
+      <div class="modal-header">
+        <h2>Digital twin</h2>
+        <button mat-icon-button (click)="toggleDigitalTwin()" class="close-button">
+          <mat-icon>twin</mat-icon>
+        </button>
+      </div>
+      <div class="modal-body">
+        <app-virtual-mobile
+          #virtualMobile>
+        </app-virtual-mobile>
       </div>
     </div>
   </div>

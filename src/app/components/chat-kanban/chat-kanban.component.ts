@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
@@ -8,6 +8,7 @@ import { KanbanBoardComponent } from '../kanban-board/kanban-board.component';
   selector: 'app-chat-kanban',
   imports: [FormsModule, DragDropModule, KanbanBoardComponent],
   templateUrl: './chat-kanban.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './chat-kanban.component.css',
 })
 export class ChatKanbanComponent {

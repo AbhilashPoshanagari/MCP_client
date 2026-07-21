@@ -2,7 +2,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MarkdownModule } from 'ngx-markdown';
 import { MapComponent } from '../map/map.component';
-import { Component, ViewChild, ElementRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, ViewChild, ElementRef, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 
 import { Message, MapLayout, FeatureDetail, WMSLayer, Layout, 
@@ -65,6 +65,7 @@ import { ChatDataTableComponent } from '../chat-data-table/chat-data-table.compo
   ],
   templateUrl: './chatbot.component.html',
   styleUrl: './chatbot.component.css',
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: true
 })
 export class ChatbotComponent{

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormAction, FormActions, FormLayout } from '../models/message.model';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -9,6 +9,7 @@ import { ApiFrammingService } from '../../services/api-framming.service';
   selector: 'app-chat-form',
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './chat-form.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './chat-form.component.css'
 })
 export class ChatFormComponent {

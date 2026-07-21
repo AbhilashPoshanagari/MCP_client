@@ -1,5 +1,5 @@
 // elicitation.component.ts
-import { Component, OnDestroy, OnInit, Output, EventEmitter, Input, OnChanges, NgZone, SimpleChanges } from '@angular/core';
+import { Component, OnDestroy, OnInit, Output, EventEmitter, Input, OnChanges, NgZone, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { McpElicitationService } from '../../services/mcp/mcp-elicitation.service';
 import { Observable, Subscription } from 'rxjs';
@@ -13,6 +13,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
   imports: [FormsModule, ReactiveFormsModule, CommonModule, MatProgressSpinnerModule],
   templateUrl: './elicitation.component.html',
   styleUrls: ['./elicitation.component.css'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: true
 })
 export class ElicitationComponent implements OnInit, OnDestroy, OnChanges {

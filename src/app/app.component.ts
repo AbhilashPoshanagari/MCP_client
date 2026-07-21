@@ -31,12 +31,13 @@ import { debounceTime, fromEvent } from 'rxjs';
 import { CommonModule, DatePipe } from '@angular/common';
 import { VideoCallComponent } from './webRTC/video-call/video-call.component';
 import { ObjectDetectionComponent } from './webRTC/object-detection/object-detection.component';
+import { VirtualMobileComponent } from './components/virtual-mobile/virtual-mobile.component';
 @Component({
   selector: 'app-root',
   imports: [InputBoxComponent, CommonModule, ChatbotComponent, SidebarComponent, MatSidenavModule, McpClientComponent,
     MatButtonModule, MatIconModule, MatToolbarModule, MatListModule, ElicitationComponent, VideoCallComponent,
     MatProgressBarModule, MatProgressSpinnerModule, WorkspaceComponent, CdkDropList, CdkDrag, DatePipe,
-    ObjectDetectionComponent],
+    ObjectDetectionComponent, VirtualMobileComponent],
   standalone: true,
   providers: [McpService, McpElicitationService],
   // templateUrl: './app.component.html',
@@ -50,6 +51,8 @@ export class AppComponent implements OnDestroy {
   @ViewChild('chatComponent') chatComponent!: ChatbotComponent;
   @ViewChild('videoCall') videoCallComponent!: VideoCallComponent;
   @ViewChild('objectDetection') objectDetectionComponent!: ObjectDetectionComponent;
+  @ViewChild('virtualMobile') VirtualMobileComponent!: VirtualMobileComponent;
+
   messages: any[] = [];
   title = 'AI powered chatbot';
   // isSidebarOpen = false;
@@ -98,6 +101,7 @@ export class AppComponent implements OnDestroy {
   unreadNotificationsCount: number = 0;
   showNotificationsModal: boolean = false;
   showVideoCall: boolean = false;
+  showDigitalTwin: boolean = false;
   roomId: string = 'default-room';
   userId: string = '';
 
@@ -745,6 +749,10 @@ onResizeDrag(event: CdkDragMove): void {
       // this.videoCallComponent.userId = this.userId;
       // this.cdr.detectChanges();
     }
+  }
+
+  toggleDigitalTwin(){
+    this.showDigitalTwin = !this.showDigitalTwin
   }
 
   toggleObjectDetection() {

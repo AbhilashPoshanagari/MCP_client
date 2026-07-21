@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
@@ -12,6 +12,7 @@ import { TruncatePipe } from '../../custom-pipes/kanban-board.pipe'; // Add this
   standalone: true,
   imports: [CommonModule, FormsModule, CdkDrag, CdkDropList, TruncatePipe],
   templateUrl: './kanban-board.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./kanban-board.component.css']
 })
 export class KanbanBoardComponent implements OnInit, OnChanges {

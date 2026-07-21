@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter  } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -39,6 +39,7 @@ import {
     HasValidTableStructurePipe
 ],
   templateUrl: './workspace.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './workspace.component.css',
 })
 export class WorkspaceComponent {

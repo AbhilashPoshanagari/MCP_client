@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, EventEmitter, Output, NgZone, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { VoiceToTextService, TranscriptionMessage } from '../../services/voice-to-text.service';
 
@@ -6,6 +6,7 @@ import { VoiceToTextService, TranscriptionMessage } from '../../services/voice-t
   selector: 'app-voice-to-text',
   imports: [],
   templateUrl: './voice-to-text.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './voice-to-text.component.css',
 })
 export class VoiceToTextComponent {

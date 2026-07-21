@@ -1,4 +1,4 @@
-import { Component, OnInit, EventEmitter, OnDestroy, Output, signal, model, inject, Input } from '@angular/core';
+import { Component, OnInit, EventEmitter, OnDestroy, Output, signal, model, inject, Input, ChangeDetectionStrategy } from '@angular/core';
 import { McpService } from '../services/mcp.service';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -42,6 +42,7 @@ interface ElicitResponse {
   // templateUrl: './mcp-client-sidemenu.component.html',
   styleUrls: ['./mcp-client.component.css'],
   // styleUrls: ['./mcp-client-sidemenu.component.css'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: true
 })
 export class McpClientComponent implements OnInit, OnDestroy {

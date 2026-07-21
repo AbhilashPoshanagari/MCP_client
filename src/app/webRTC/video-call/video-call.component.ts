@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, NgZone, ViewChild, ElementRef, Input, Output, EventEmitter, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, ViewChild, ElementRef, Input, Output, EventEmitter, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -43,6 +43,7 @@ interface CallState {
     FormsModule
   ],
   templateUrl: './video-call.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./video-call.component.css']
 })
 export class VideoCallComponent implements OnInit, OnDestroy {

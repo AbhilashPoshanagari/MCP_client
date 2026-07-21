@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, NgZone, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, NgZone, OnDestroy, OnInit, Output, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { RestApiService } from '../../services/rest-api.service';
 import { StorageService } from '../../services/storage.service';
 import { ENDPOINTS } from '../../constants/apiUrls';
@@ -7,6 +7,7 @@ import { ENDPOINTS } from '../../constants/apiUrls';
   selector: 'app-object-detection',
   imports: [],
   templateUrl: './object-detection.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './object-detection.component.css',
 })
 export class ObjectDetectionComponent implements OnInit, OnDestroy, AfterViewInit{

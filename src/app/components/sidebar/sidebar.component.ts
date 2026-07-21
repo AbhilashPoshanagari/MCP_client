@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
 import { McpService } from '../../services/mcp.service';
 import {MatTabsModule} from '@angular/material/tabs';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,6 +23,7 @@ interface Tool extends NamedItem {
   providers: [McpService],
   templateUrl: './sidebar.component.html',
   styleUrl: './sidebar.component.css',
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: true
 })
 export class SidebarComponent implements OnInit {

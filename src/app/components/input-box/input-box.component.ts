@@ -1,5 +1,8 @@
-import { Component, EventEmitter, Output, OnInit, afterNextRender,
-  OnDestroy, inject, Injector, ViewChild, NgZone, ChangeDetectorRef } from '@angular/core';
+import {
+  Component, EventEmitter, Output, OnInit, afterNextRender,
+  OnDestroy, inject, Injector, ViewChild, NgZone, ChangeDetectorRef,
+  ChangeDetectionStrategy
+} from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
  
 // import { MatButtonModule } from '@angular/material/button';
@@ -24,6 +27,7 @@ import { TranscriptionMessage, VoiceToTextService } from '../../services/voice-t
     MatMenuModule, MatIconModule, MatInputModule, MatFormFieldModule, MatMenuTrigger, MatChipsModule, TextFieldModule],
   templateUrl: './input-box.component.html',
   styleUrl: './input-box.component.css',
+  changeDetection: ChangeDetectionStrategy.Eager,
   standalone: true
 })
 export class InputBoxComponent implements OnInit, OnDestroy {

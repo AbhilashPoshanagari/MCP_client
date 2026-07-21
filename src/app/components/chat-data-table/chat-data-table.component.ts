@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges, ViewChild, AfterViewInit, HostListener } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, SimpleChanges, ViewChild, AfterViewInit, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AgGridAngular } from 'ag-grid-angular';
 import { 
@@ -25,6 +25,7 @@ ModuleRegistry.registerModules(sharedModules);
   standalone: true,
   imports: [CommonModule, AgGridAngular],
   templateUrl: './chat-data-table.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrls: ['./chat-data-table.component.css']
 })
 export class ChatDataTableComponent implements OnInit, OnChanges, AfterViewInit {

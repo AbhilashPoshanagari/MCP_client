@@ -15,3 +15,7 @@ export interface VirtualMobileRotation {
   y: number;
   z: number;
 }
+
+// Explicit motion source, so the animation loop and the service agree on
+// who is allowed to write to targetRotation at any given time.
+export type MotionMode = 'simulated' | 'real';

@@ -1,4 +1,25 @@
-<div
-  #canvasContainer
-  class="virtual-mobile-container">
+<div class="virtual-mobile-wrapper">
+  <div
+    #canvasContainer
+    class="virtual-mobile-container">
+  </div>
+
+  @if (renderError) {
+    <div class="render-error-banner">{{ renderError }}</div>
+  } @else {
+    <div class="motion-controls">
+      @if (motionError) {
+        <div class="motion-error">{{ motionError }}</div>
+      }
+      @if (!usingRealMotion) {
+        <button type="button" class="motion-toggle-btn" (click)="requestDeviceMotion()">
+          Use my device's motion
+        </button>
+      } @else {
+        <button type="button" class="motion-toggle-btn active" (click)="useSimulatedMotion()">
+          Using real motion — switch to simulated
+        </button>
+      }
+    </div>
+  }
 </div>
